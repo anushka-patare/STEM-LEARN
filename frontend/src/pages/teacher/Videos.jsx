@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { videoService, adminService } from '../../services/api';
+import { videoService, academicService } from '../../services/api';
 import {
   FiVideo,
   FiPlus,
@@ -61,11 +61,11 @@ export default function TeacherVideos() {
     setLoading(true);
     try {
       const [hierRes, vidsRes, subRes, catRes, chapRes] = await Promise.all([
-        videoService.getHierarchy({ grade: gradeFilter !== 'all' ? gradeFilter : undefined }),
-        videoService.getAll({ grade: gradeFilter !== 'all' ? gradeFilter : undefined }),
-        adminService.getSubjects(),
-        adminService.getCategories(),
-        adminService.getChapters()
+        videoService.getHierarchy({ grade: gradeFilter !== 'all' ? gradeFilter : undefined }).catch(e => ({ data: { success: false } })),
+        videoService.getAll({ grade: gradeFilter !== 'all' ? gradeFilter : undefined }).catch(e => ({ data: { success: false } })),
+        academicService.getSubjects().catch(e => ({ data: { success: false } })),
+        academicService.getCategories().catch(e => ({ data: { success: false } })),
+        academicService.getChapters().catch(e => ({ data: { success: false } }))
       ]);
 
       if (hierRes.data?.success) {

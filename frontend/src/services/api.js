@@ -123,6 +123,9 @@ export const adminService = {
   getSmtpSettings: () => api.get('/admin/settings/smtp'),
   updateSmtpSettings: (data) => api.put('/admin/settings/smtp', data),
   testSmtpConnection: (data) => api.post('/admin/settings/smtp/test', data),
+  getSubjects: (params) => api.get('/subjects', { params }),
+  getCategories: (params) => api.get('/categories', { params }),
+  getChapters: (params) => api.get('/chapters', { params }),
 };
 
 // ─── ACADEMIC / CURRICULUM SERVICES ─────────────────────────

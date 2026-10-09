@@ -70,8 +70,8 @@ export default function StudentVideos() {
     setLoading(true);
     try {
       const [hierRes, vidsRes] = await Promise.all([
-        videoService.getHierarchy({ grade: selectedGrade !== 'all' ? selectedGrade : undefined }),
-        videoService.getAll({ grade: selectedGrade !== 'all' ? selectedGrade : undefined })
+        videoService.getHierarchy({ grade: selectedGrade !== 'all' ? selectedGrade : undefined }).catch(e => ({ data: { success: false } })),
+        videoService.getAll({ grade: selectedGrade !== 'all' ? selectedGrade : undefined }).catch(e => ({ data: { success: false } }))
       ]);
 
       if (hierRes.data?.success) {
