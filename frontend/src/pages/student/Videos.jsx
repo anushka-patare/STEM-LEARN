@@ -21,6 +21,28 @@ import {
   FiExternalLink
 } from 'react-icons/fi';
 
+const getSubjectIcon = (sub) => {
+  const iconStr = (sub?.icon || '').trim();
+  const name = (sub?.name || '').toLowerCase();
+
+  if (iconStr === 'fa-flask-vial' || iconStr.includes('flask') || name.includes('science')) {
+    return '🔬';
+  }
+  if (iconStr === 'fa-microchip' || iconStr.includes('chip') || iconStr.includes('cpu') || name.includes('tech') || name.includes('comp')) {
+    return '💻';
+  }
+  if (iconStr === 'fa-square-root-variable' || iconStr.includes('root') || iconStr.includes('math') || name.includes('math')) {
+    return '📐';
+  }
+  if (iconStr.includes('book') || name.includes('english')) {
+    return '📚';
+  }
+  if (iconStr && !iconStr.startsWith('fa-') && iconStr.length <= 4) {
+    return iconStr;
+  }
+  return '🔬';
+};
+
 export default function StudentVideos() {
   const { user } = useAuth();
   const studentGrade = user?.grade ? String(user.grade).replace('Grade', '').trim() : '7';
@@ -331,16 +353,20 @@ export default function StudentVideos() {
                         : 'bg-white text-slate-800 border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/20'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-3xl">{sub.icon || '🔬'}</span>
-                      <div>
-                        <h4 className="font-extrabold text-sm sm:text-base tracking-tight">{sub.name}</h4>
-                        <p className={`text-xs ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 transition-colors ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'
+                      }`}>
+                        {getSubjectIcon(sub)}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-extrabold text-sm sm:text-base tracking-tight truncate">{sub.name}</h4>
+                        <p className={`text-xs truncate ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
                           {sub.video_count} Video Lessons
                         </p>
                       </div>
                     </div>
-                    <FiChevronRight className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-300'}`} />
+                    <FiChevronRight className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-slate-300'}`} />
                   </button>
                 );
               })}

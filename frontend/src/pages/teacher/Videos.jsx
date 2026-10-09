@@ -22,6 +22,28 @@ import {
   FiChevronRight
 } from 'react-icons/fi';
 
+const getSubjectIcon = (sub) => {
+  const iconStr = (sub?.icon || '').trim();
+  const name = (sub?.name || '').toLowerCase();
+
+  if (iconStr === 'fa-flask-vial' || iconStr.includes('flask') || name.includes('science')) {
+    return '🔬';
+  }
+  if (iconStr === 'fa-microchip' || iconStr.includes('chip') || iconStr.includes('cpu') || name.includes('tech') || name.includes('comp')) {
+    return '💻';
+  }
+  if (iconStr === 'fa-square-root-variable' || iconStr.includes('root') || iconStr.includes('math') || name.includes('math')) {
+    return '📐';
+  }
+  if (iconStr.includes('book') || name.includes('english')) {
+    return '📚';
+  }
+  if (iconStr && !iconStr.startsWith('fa-') && iconStr.length <= 4) {
+    return iconStr;
+  }
+  return '🔬';
+};
+
 export default function TeacherVideos() {
   const { user } = useAuth();
 
@@ -448,16 +470,20 @@ export default function TeacherVideos() {
                         : 'bg-white text-slate-800 border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/30'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{sub.icon || '🔬'}</span>
-                      <div>
-                        <h4 className="font-bold text-sm tracking-tight">{sub.name}</h4>
-                        <p className={`text-[11px] ${isSelected ? 'text-blue-100 font-semibold' : 'text-slate-600 font-bold'}`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-xl shrink-0 transition-colors ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'
+                      }`}>
+                        {getSubjectIcon(sub)}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm tracking-tight truncate">{sub.name}</h4>
+                        <p className={`text-[11px] truncate ${isSelected ? 'text-blue-100 font-semibold' : 'text-slate-600 font-bold'}`}>
                           {sub.category_count} categories · {sub.video_count} videos
                         </p>
                       </div>
                     </div>
-                    <FiChevronRight className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
+                    <FiChevronRight className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
                   </button>
                 );
               })}
