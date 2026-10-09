@@ -124,7 +124,6 @@ def seed_grade9_data(db, dry_run=False):
     # ─── 4. SUBJECTS & CATEGORIES LOOKUP ───────────────────────
     science = db.subjects.find_one({'name': 'Science'})
     tech = db.subjects.find_one({'name': 'Technology'})
-    eng = db.subjects.find_one({'name': 'Engineering'})
     math = db.subjects.find_one({'name': 'Mathematics'})
 
     science_id = str(science['_id']) if science else ''

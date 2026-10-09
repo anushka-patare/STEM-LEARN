@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   FiCompass,
   FiCpu,
-  FiTool,
   FiPercent,
   FiArrowRight,
   FiCheckCircle,
@@ -43,20 +42,6 @@ export default function StemDisciplines() {
       },
     },
     {
-      id: 'engineering',
-      title: 'Engineering',
-      icon: FiTool,
-      color: 'amber',
-      badgeBg: 'bg-amber-100 text-amber-800',
-      tagline: 'Design Thinking, Structures & Circuits',
-      desc: 'Applying physical laws to solve tangible problems through prototyping, simple machines, and electronic circuitry.',
-      grades: {
-        '6': ['Simple Machines & Levers', 'Pulleys and Wheels', 'Basics of Electric Circuits', 'Building Strong Frameworks'],
-        '7': ['Electromagnets & Motors', 'Bridge Design & Load Distribution', 'Hydraulic Principles', 'Renewable Energy Harvesters'],
-        '8': ['Sensors & Microcontrollers', 'Robotics Mechanics', 'Materials Science & Stress Tests', 'Automated Control Logic'],
-      },
-    },
-    {
       id: 'mathematics',
       title: 'Mathematics',
       icon: FiPercent,
@@ -81,7 +66,7 @@ export default function StemDisciplines() {
             Interdisciplinary Curriculum
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-            Four Core STEM Disciplines
+            Core STEM Disciplines
           </h2>
           <p className="text-base text-slate-600">
             Carefully curated middle-school curriculum units with equated difficulty, Bloom-taxonomy cognitive levels, and interactive quiz challenges.
@@ -107,8 +92,8 @@ export default function StemDisciplines() {
           </div>
         </div>
 
-        {/* 4 Pillars Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 3 Pillars Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {disciplines.map((d) => {
             const Icon = d.icon;
             const currentGradeChapters = d.grades[selectedGrade] || [];

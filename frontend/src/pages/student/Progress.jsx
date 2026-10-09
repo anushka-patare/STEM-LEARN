@@ -182,7 +182,7 @@ export default function StudentProgress() {
 
     // If no quizzes loaded yet, populate from attempts
     if (Object.keys(subjectsMap).length === 0) {
-      ['Science', 'Mathematics', 'Technology', 'Engineering'].forEach(sub => {
+      ['Science', 'Mathematics', 'Technology'].forEach(sub => {
         subjectsMap[sub] = {
           name: sub,
           totalQuizzes: 0,

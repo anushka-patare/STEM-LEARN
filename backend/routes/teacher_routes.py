@@ -456,7 +456,6 @@ def get_student_detailed_performance(student_id):
         'Science': {'color': '#10b981', 'bg': '#ecfdf5', 'border': '#a7f3d0'},
         'Technology': {'color': '#3b82f6', 'bg': '#eff6ff', 'border': '#bfdbfe'},
         'Mathematics': {'color': '#8b5cf6', 'bg': '#f5f3ff', 'border': '#ddd6fe'},
-        'Engineering': {'color': '#f59e0b', 'bg': '#fffbeb', 'border': '#fde68a'},
         'English': {'color': '#ec4899', 'bg': '#fdf2f8', 'border': '#fbcfe8'}
     }
 
@@ -805,7 +804,6 @@ def get_team_detailed_performance(team_id):
         'Science': {'color': '#10b981', 'bg': '#ecfdf5', 'border': '#a7f3d0'},
         'Technology': {'color': '#3b82f6', 'bg': '#eff6ff', 'border': '#bfdbfe'},
         'Mathematics': {'color': '#8b5cf6', 'bg': '#f5f3ff', 'border': '#ddd6fe'},
-        'Engineering': {'color': '#f59e0b', 'bg': '#fffbeb', 'border': '#fde68a'},
         'English': {'color': '#ec4899', 'bg': '#fdf2f8', 'border': '#fbcfe8'}
     }
 

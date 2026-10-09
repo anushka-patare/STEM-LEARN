@@ -11,7 +11,6 @@ import {
   FiPhone,
   FiCompass,
   FiCpu,
-  FiTool,
   FiPercent,
   FiEye,
   FiEyeOff,
@@ -256,9 +255,6 @@ export default function StudentAuth({ initialMode = 'login' }) {
               </span>
               <span className="w-10 h-10 rounded-full border border-purple-100 bg-purple-50/80 flex items-center justify-center text-purple-600 shadow-xs hover:scale-110 transition-transform" title="Technology">
                 <FiCpu className="w-4 h-4" />
-              </span>
-              <span className="w-10 h-10 rounded-full border border-amber-100 bg-amber-50/80 flex items-center justify-center text-amber-600 shadow-xs hover:scale-110 transition-transform" title="Engineering">
-                <FiTool className="w-4 h-4" />
               </span>
               <span className="w-10 h-10 rounded-full border border-emerald-100 bg-emerald-50/80 flex items-center justify-center text-emerald-600 shadow-xs hover:scale-110 transition-transform" title="Mathematics">
                 <FiPercent className="w-4 h-4" />

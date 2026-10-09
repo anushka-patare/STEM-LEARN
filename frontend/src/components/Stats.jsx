@@ -11,8 +11,8 @@ export default function Stats({ content }) {
     },
     {
       label: content?.stats_pillars_label || 'STEM Disciplines',
-      value: content?.stats_pillars_value || '4 Core Pillars',
-      desc: content?.stats_pillars_desc || 'Science, Technology, Engineering, and Mathematics',
+      value: content?.stats_pillars_value || '3 Core Pillars',
+      desc: content?.stats_pillars_desc || 'Science, Technology, and Mathematics',
       icon: FiBookOpen,
       gradient: 'from-indigo-500 to-purple-600',
     },

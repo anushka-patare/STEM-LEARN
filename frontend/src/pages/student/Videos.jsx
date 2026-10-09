@@ -29,8 +29,7 @@ export default function StudentVideos() {
   const [allVideos, setAllVideos] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filter states
-  const [selectedGrade, setSelectedGrade] = useState('all');
+  // Search term
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
@@ -69,9 +68,10 @@ export default function StudentVideos() {
   const fetchHierarchyData = async () => {
     setLoading(true);
     try {
+      // Strictly fetch only videos and hierarchy belonging to the student's enrolled grade
       const [hierRes, vidsRes] = await Promise.all([
-        videoService.getHierarchy({ grade: selectedGrade !== 'all' ? selectedGrade : undefined }).catch(e => ({ data: { success: false } })),
-        videoService.getAll({ grade: selectedGrade !== 'all' ? selectedGrade : undefined }).catch(e => ({ data: { success: false } }))
+        videoService.getHierarchy({ grade: studentGrade }).catch(e => ({ data: { success: false } })),
+        videoService.getAll({ grade: studentGrade }).catch(e => ({ data: { success: false } }))
       ]);
 
       if (hierRes.data?.success) {
@@ -101,7 +101,7 @@ export default function StudentVideos() {
 
   useEffect(() => {
     fetchHierarchyData();
-  }, [selectedGrade]);
+  }, [studentGrade]);
 
   // Current selections
   const currentSubject = hierarchy.find((s) => s._id === selectedSubjectId) || hierarchy[0];
@@ -133,11 +133,11 @@ export default function StudentVideos() {
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-tight">
-            Curriculum Video Lessons
+            Curriculum Video Lessons (Grade {studentGrade})
           </h1>
 
           <p className="text-xs sm:text-sm text-blue-100 leading-relaxed">
-            Watch concept-rich YouTube video lectures organized by <strong>Subject → Category → Chapter</strong>. 
+            Watch concept-rich YouTube video lectures organized by <strong>Subject → Category → Chapter</strong> for Grade {studentGrade}. 
             Build visual intuition before attempting your competitive or squad quizzes!
           </p>
 
@@ -148,7 +148,7 @@ export default function StudentVideos() {
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 font-bold">
               <FiVideo className="text-amber-300 w-4 h-4" />
-              <span>{allVideos.length} Available Lessons</span>
+              <span>{allVideos.length} Grade {studentGrade} Lessons</span>
             </div>
           </div>
         </div>
@@ -157,13 +157,13 @@ export default function StudentVideos() {
         <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
       </div>
 
-      {/* ─── Search & Grade Filter Bar ─── */}
+      {/* ─── Search & Grade Lock Bar ─── */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="relative flex-1">
           <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search lessons by topic (e.g., Newton's laws, Circuits, Cells, Python)..."
+            placeholder={`Search Grade ${studentGrade} lessons by topic (e.g., Newton's laws, Circuits, Cells, Python)...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/60"
@@ -180,18 +180,10 @@ export default function StudentVideos() {
         </div>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="font-bold text-slate-500 whitespace-nowrap">Filter Grade:</span>
-          <select
-            value={selectedGrade}
-            onChange={(e) => setSelectedGrade(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white focus:outline-none cursor-pointer"
-          >
-            <option value="all">All Grades</option>
-            <option value="6">Grade 6</option>
-            <option value="7">Grade 7</option>
-            <option value="8">Grade 8</option>
-            <option value="9">Grade 9</option>
-          </select>
+          <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-blue-50 border border-blue-200/80 text-blue-700 font-bold whitespace-nowrap shadow-xs">
+            <FiAward className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>Enrolled: Grade {studentGrade} Only</span>
+          </div>
         </div>
       </div>
 

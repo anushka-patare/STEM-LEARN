@@ -95,7 +95,6 @@ def seed_database():
     subjects_data = [
         {'name': 'Science', 'icon': '🔬', 'description': 'Explore the natural world through Physics, Chemistry, and Biology'},
         {'name': 'Technology', 'icon': '💻', 'description': 'Learn about computers, coding, and digital systems'},
-        {'name': 'Engineering', 'icon': '⚙️', 'description': 'Design, build, and problem-solve with engineering concepts'},
         {'name': 'Mathematics', 'icon': '📐', 'description': 'Master numbers, algebra, geometry, and problem solving'},
     ]
     subject_ids = {}
@@ -123,7 +122,6 @@ def seed_database():
         {'name': 'Digital Literacy', 'subject': 'Technology', 'description': 'Understanding digital tools and safety'},
         {'name': 'Algebra', 'subject': 'Mathematics', 'description': 'Variables, expressions, and equations'},
         {'name': 'Geometry', 'subject': 'Mathematics', 'description': 'Shapes, angles, and spatial reasoning'},
-        {'name': 'Mechanical Engineering', 'subject': 'Engineering', 'description': 'Simple machines and mechanisms'},
     ]
     category_ids = {}
     for cat in categories_data:

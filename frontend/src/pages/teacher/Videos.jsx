@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { videoService, academicService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import {
   FiVideo,
   FiPlus,
@@ -22,12 +23,53 @@ import {
 } from 'react-icons/fi';
 
 export default function TeacherVideos() {
+  const { user } = useAuth();
+
+  // Extract teacher's assigned grades
+  const teacherGrades = useMemo(() => {
+    const gradesSet = new Set();
+    if (Array.isArray(user?.assigned_classes)) {
+      user.assigned_classes.forEach((cls) => {
+        if (typeof cls === 'string') {
+          const match = cls.match(/\d+/);
+          if (match) gradesSet.add(match[0]);
+        } else if (typeof cls === 'object' && cls?.grade) {
+          const match = String(cls.grade).match(/\d+/);
+          if (match) gradesSet.add(match[0]);
+        }
+      });
+    }
+    if (user?.assigned_grade) {
+      const match = String(user.assigned_grade).match(/\d+/);
+      if (match) gradesSet.add(match[0]);
+    }
+    if (user?.grade) {
+      const match = String(user.grade).match(/\d+/);
+      if (match) gradesSet.add(match[0]);
+    }
+    const list = Array.from(gradesSet).sort((a, b) => Number(a) - Number(b));
+    if (user?.role === 'admin' || list.length === 0) {
+      return ['6', '7', '8', '9'];
+    }
+    return list;
+  }, [user]);
+
   const [hierarchy, setHierarchy] = useState([]);
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('hierarchy'); // 'hierarchy' | 'all'
   const [searchTerm, setSearchTerm] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('all');
+  const [gradeFilter, setGradeFilter] = useState(() => {
+    return teacherGrades.length === 1 ? teacherGrades[0] : (teacherGrades[0] || '7');
+  });
+
+  useEffect(() => {
+    if (teacherGrades.length === 1) {
+      setGradeFilter(teacherGrades[0]);
+    } else if (gradeFilter !== 'all' && !teacherGrades.includes(gradeFilter)) {
+      setGradeFilter(teacherGrades[0] || '7');
+    }
+  }, [teacherGrades]);
 
   // Drilldown states for Subject -> Category -> Chapter
   const [selectedSubjectId, setSelectedSubjectId] = useState(null);
@@ -53,7 +95,7 @@ export default function TeacherVideos() {
     subject_id: '',
     category_id: '',
     chapter_id: '',
-    grade: '7',
+    grade: teacherGrades[0] || '7',
     duration: '10-15 mins'
   });
 
@@ -89,7 +131,11 @@ export default function TeacherVideos() {
 
       if (subRes.data?.success) setSubjectsList(subRes.data.data || []);
       if (catRes.data?.success) setCategoriesList(catRes.data.data || []);
-      if (chapRes.data?.success) setChaptersList(chapRes.data.data || []);
+      if (chapRes.data?.success) {
+        const rawChapters = chapRes.data.data || [];
+        const filtered = rawChapters.filter(ch => teacherGrades.includes(String(ch.grade)));
+        setChaptersList(filtered);
+      }
     } catch (err) {
       console.error('Failed to load video lessons data', err);
       toast.error('Failed to load video lessons');
@@ -104,6 +150,7 @@ export default function TeacherVideos() {
 
   // Open modal for new video or editing
   const handleOpenModal = (video = null, prefill = {}) => {
+    const defaultGrade = prefill.grade || (gradeFilter !== 'all' ? gradeFilter : (teacherGrades[0] || '7'));
     if (video) {
       setEditingVideo(video);
       setFormData({
@@ -113,7 +160,7 @@ export default function TeacherVideos() {
         subject_id: video.subject_id || '',
         category_id: video.category_id || '',
         chapter_id: video.chapter_id || '',
-        grade: video.grade || '7',
+        grade: video.grade || defaultGrade,
         duration: video.duration || '10-15 mins'
       });
     } else {
@@ -125,7 +172,7 @@ export default function TeacherVideos() {
         subject_id: prefill.subject_id || selectedSubjectId || (subjectsList[0]?._id || ''),
         category_id: prefill.category_id || selectedCategoryId || '',
         chapter_id: prefill.chapter_id || selectedChapterId || '',
-        grade: prefill.grade || (gradeFilter !== 'all' ? gradeFilter : '7'),
+        grade: defaultGrade,
         duration: '10-15 mins'
       });
     }
@@ -137,9 +184,10 @@ export default function TeacherVideos() {
     (c) => String(c.subject_id) === String(formData.subject_id)
   );
 
-  // Filter chapters based on selected category in form
+  // Filter chapters based on selected category in form and teacher's assigned grades
   const formFilteredChapters = chaptersList.filter(
-    (ch) => String(ch.category_id) === String(formData.category_id)
+    (ch) => String(ch.category_id) === String(formData.category_id) &&
+            teacherGrades.includes(String(ch.grade))
   );
 
   const handleSubmit = async (e) => {
@@ -327,17 +375,22 @@ export default function TeacherVideos() {
           {/* Grade Filter */}
           <div className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold">
             <span>Grade:</span>
-            <select
-              value={gradeFilter}
-              onChange={(e) => setGradeFilter(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 focus:outline-none"
-            >
-              <option value="all">All Grades</option>
-              <option value="6">Grade 6</option>
-              <option value="7">Grade 7</option>
-              <option value="8">Grade 8</option>
-              <option value="9">Grade 9</option>
-            </select>
+            {teacherGrades.length === 1 ? (
+              <span className="px-2.5 py-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 font-bold">
+                Grade {teacherGrades[0]} (Assigned)
+              </span>
+            ) : (
+              <select
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
+                className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-slate-50 focus:outline-none cursor-pointer"
+              >
+                <option value="all">All Assigned ({teacherGrades.map(g => `G${g}`).join(', ')})</option>
+                {teacherGrades.map((g) => (
+                  <option key={g} value={g}>Grade {g}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {activeView === 'all' && (
@@ -872,7 +925,15 @@ export default function TeacherVideos() {
                     </label>
                     <select
                       value={formData.chapter_id}
-                      onChange={(e) => setFormData({ ...formData, chapter_id: e.target.value })}
+                      onChange={(e) => {
+                        const newChId = e.target.value;
+                        const matched = chaptersList.find((ch) => ch._id === newChId);
+                        setFormData((prev) => ({
+                          ...prev,
+                          chapter_id: newChId,
+                          grade: matched?.grade ? String(matched.grade) : prev.grade
+                        }));
+                      }}
                       className="stem-input text-xs font-semibold"
                       required
                       disabled={!formData.category_id}
@@ -880,7 +941,7 @@ export default function TeacherVideos() {
                       <option value="">Select Chapter</option>
                       {formFilteredChapters.map((ch) => (
                         <option key={ch._id} value={ch._id}>
-                          {ch.name} (G{ch.grade})
+                          {ch.name} (Grade {ch.grade})
                         </option>
                       ))}
                     </select>
@@ -947,11 +1008,9 @@ export default function TeacherVideos() {
                     onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
                     className="stem-input text-xs font-bold"
                   >
-                    <option value="6">Grade 6</option>
-                    <option value="7">Grade 7</option>
-                    <option value="8">Grade 8</option>
-                    <option value="9">Grade 9</option>
-                    <option value="all">All Grades</option>
+                    {teacherGrades.map((g) => (
+                      <option key={g} value={g}>Grade {g}</option>
+                    ))}
                   </select>
                 </div>
                 <div>

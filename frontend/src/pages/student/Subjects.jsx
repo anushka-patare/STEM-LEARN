@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { academicService, studentService } from '../../services/api';
-import { FiCompass, FiCpu, FiTool, FiPercent, FiBookOpen, FiArrowRight, FiCheckCircle, FiLayers } from 'react-icons/fi';
+import { FiCompass, FiCpu, FiPercent, FiBookOpen, FiArrowRight, FiCheckCircle, FiLayers } from 'react-icons/fi';
 
 const SUBJECT_THEMES = {
   science: { icon: FiCompass, color: 'blue', desc: 'Investigate physics, chemistry, biological ecosystems, and natural phenomena.' },
   technology: { icon: FiCpu, color: 'purple', desc: 'Master algorithmic logic, conditional loops, variables, and modern computer systems.' },
-  engineering: { icon: FiTool, color: 'amber', desc: 'Understand physical mechanisms, pulleys, electric circuits, and motors.' },
   mathematics: { icon: FiPercent, color: 'emerald', desc: 'Develop deductive reasoning, algebraic formulas, geometry, and statistical analysis.' },
 };
 
@@ -86,7 +85,6 @@ export default function StudentSubjects() {
           { id: 'all', label: 'All Subjects' },
           { id: 'science', label: 'Science' },
           { id: 'technology', label: 'Technology' },
-          { id: 'engineering', label: 'Engineering' },
           { id: 'mathematics', label: 'Mathematics' },
         ].map((tab) => (
           <button

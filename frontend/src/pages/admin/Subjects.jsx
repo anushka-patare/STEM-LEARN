@@ -5,7 +5,6 @@ import {
   FiList,
   FiCompass, 
   FiCpu, 
-  FiTool, 
   FiPercent, 
   FiPlus, 
   FiTrash2, 
@@ -21,14 +20,12 @@ import { academicService } from '../../services/api';
 const DEFAULT_ICONS = {
   'Science': FiCompass,
   'Technology': FiCpu,
-  'Engineering': FiTool,
   'Mathematics': FiPercent,
 };
 
 const DEFAULT_COLORS = {
   'Science': 'blue',
   'Technology': 'purple',
-  'Engineering': 'amber',
   'Mathematics': 'emerald',
 };
 

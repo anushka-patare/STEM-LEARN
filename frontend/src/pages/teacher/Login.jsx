@@ -342,7 +342,6 @@ export default function TeacherLogin() {
                         <option value="Science">Science (Physics/Chem/Bio)</option>
                         <option value="Mathematics">Mathematics</option>
                         <option value="Technology">Technology & Coding</option>
-                        <option value="Engineering">Engineering Design</option>
                       </select>
                     </div>
                     <div>

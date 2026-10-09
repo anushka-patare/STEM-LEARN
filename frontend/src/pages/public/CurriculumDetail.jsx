@@ -4,7 +4,6 @@ import {
   FiBook,
   FiCompass,
   FiCpu,
-  FiTool,
   FiPercent,
   FiClock,
   FiCheckCircle,
@@ -141,50 +140,6 @@ export default function CurriculumDetail() {
       ],
     },
 
-    // ─── ENGINEERING ───
-    {
-      id: 'eng-6',
-      grade: '6',
-      subject: 'engineering',
-      subjectTitle: 'Engineering',
-      icon: FiTool,
-      color: 'amber',
-      title: 'Mechanical Principles & Simple Machines',
-      chapters: [
-        { name: 'Levers, Fulcrums & Mechanical Advantage', hours: '4 hrs', questions: 30 },
-        { name: 'Pulleys, Gears & Torque Transmission', hours: '4 hrs', questions: 30 },
-        { name: 'Structural Stability & Truss Bridges', hours: '5 hrs', questions: 35 },
-      ],
-    },
-    {
-      id: 'eng-7',
-      grade: '7',
-      subject: 'engineering',
-      subjectTitle: 'Engineering',
-      icon: FiTool,
-      color: 'amber',
-      title: 'Applied Physics & Electromechanics',
-      chapters: [
-        { name: 'Electromagnets, Motors & Dynamos', hours: '5 hrs', questions: 35 },
-        { name: 'Hydraulic Systems & Fluid Power', hours: '4 hrs', questions: 30 },
-        { name: 'Solar Panels & Energy Storage', hours: '4 hrs', questions: 25 },
-      ],
-    },
-    {
-      id: 'eng-8',
-      grade: '8',
-      subject: 'engineering',
-      subjectTitle: 'Engineering',
-      icon: FiTool,
-      color: 'amber',
-      title: 'Robotics & Control Automation',
-      chapters: [
-        { name: 'Sensors (Ultrasonic, IR, Temperature)', hours: '5 hrs', questions: 35 },
-        { name: 'Microcontroller Logic & Inputs/Outputs', hours: '6 hrs', questions: 40 },
-        { name: 'Kinematics & Robotic Actuation', hours: '5 hrs', questions: 35 },
-      ],
-    },
-
     // ─── MATHEMATICS ───
     {
       id: 'math-6',
@@ -296,7 +251,6 @@ export default function CurriculumDetail() {
               { id: 'all', label: 'All Disciplines' },
               { id: 'science', label: 'Science' },
               { id: 'technology', label: 'Technology' },
-              { id: 'engineering', label: 'Engineering' },
               { id: 'mathematics', label: 'Mathematics' },
             ].map((sub) => (
               <button

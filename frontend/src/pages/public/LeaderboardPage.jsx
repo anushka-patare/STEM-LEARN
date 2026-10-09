@@ -43,7 +43,7 @@ export default function LeaderboardPage() {
       spotlight_enabled: true,
       spotlight_badge: '★ Academic Spotlight',
       spotlight_title: 'Middle School STEM Excellence Showcase',
-      spotlight_text: 'Live rankings update in real-time as students solve calibrated quizzes in science, technology, engineering, and mathematics.',
+      spotlight_text: 'Live rankings update in real-time as students solve calibrated quizzes in science, technology, and mathematics.',
     }
   });
 

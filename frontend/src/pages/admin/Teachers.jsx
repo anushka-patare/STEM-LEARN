@@ -33,7 +33,7 @@ const SUBJECT_OPTIONS = [
   'Biology & Life Sciences',
   'Applied Mathematics',
   'Computer Science & AI',
-  'Robotics & Engineering',
+  'Robotics & Automation',
   'Environmental Science',
 ];
 
@@ -1620,7 +1620,6 @@ export default function AdminTeachers() {
                 >
                   <option value="Science">Science (Physics, Chemistry, Biology)</option>
                   <option value="Technology">Technology & Computational Thinking</option>
-                  <option value="Engineering">Engineering & Simple Machines</option>
                   <option value="Mathematics">Mathematics & Algebra</option>
                 </select>
               </div>

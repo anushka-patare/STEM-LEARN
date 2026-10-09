@@ -75,8 +75,7 @@ def public_overview():
         breakdown = s.get('subject_breakdown', {
             'science': int(s.get('points_science', 0)),
             'mathematics': int(s.get('points_math', 0)),
-            'technology': int(s.get('points_tech', 0)),
-            'engineering': int(s.get('points_engineering', 0))
+            'technology': int(s.get('points_tech', 0))
         })
 
         all_students.append({
@@ -247,8 +246,7 @@ def get_student_details(student_id):
         'subject_breakdown': student.get('subject_breakdown', {
             'science': int(student.get('points_science', 0)),
             'mathematics': int(student.get('points_math', 0)),
-            'technology': int(student.get('points_tech', 0)),
-            'engineering': int(student.get('points_engineering', 0))
+            'technology': int(student.get('points_tech', 0))
         }),
         'recent_submissions': [
             {

@@ -19,7 +19,7 @@ export default function About() {
     title: 'STEMLearn Research Initiative',
     subtitle: 'Evaluating the Effectiveness of Competitive vs. Collaborative Leaderboards in Middle School STEM Learning (Grades 6, 7 & 8).',
     context_title: 'Research Context & Problem Statement',
-    context_p1: 'Middle school represents a pivotal developmental juncture where students form their enduring attitudes towards Science, Technology, Engineering, and Mathematics. While digital gamification has emerged as a popular pedagogical tool, conventional systems overwhelmingly default to individual zero-sum leaderboards.',
+    context_p1: 'Middle school represents a pivotal developmental juncture where students form their enduring attitudes towards Science, Technology, and Mathematics. While digital gamification has emerged as a popular pedagogical tool, conventional systems overwhelmingly default to individual zero-sum leaderboards.',
     context_p2: 'However, high-stakes individual rank boards often foster math anxiety and discourage students who fall behind early. Conversely, collaborative team gamification can stimulate peer mentorship and psychological safety, but may suffer from "free-rider" effects.',
     context_p3: 'STEMLearn was developed as a controlled empirical platform to definitively compare these two social dynamics under strict experimental conditions—keeping the curriculum, quiz items, time limits, and grading rubrics 100% identical.',
     objective_1_title: 'Empirical Motivation Comparison',

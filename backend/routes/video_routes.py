@@ -1,4 +1,6 @@
-"""Video lesson management routes for STEM YouTube content linked to Subject -> Category -> Chapter."""
+"""Video lesson management routes for STEM YouTube content linked to Subject -> Category -> Chapter.
+Enforces strict grade isolation for students (only enrolled grade) and teachers (only assigned grades).
+"""
 import re
 from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
@@ -46,11 +48,45 @@ def extract_youtube_id(url):
     return None
 
 
+def get_teacher_assigned_grades(user_doc):
+    """Extract distinct assigned grade numbers as strings for a teacher."""
+    if not user_doc:
+        return []
+    grades = set()
+    classes = user_doc.get('assigned_classes', [])
+    if isinstance(classes, list):
+        for item in classes:
+            if isinstance(item, dict):
+                g = item.get('grade')
+                if g:
+                    m = re.search(r'\d+', str(g))
+                    if m:
+                        grades.add(m.group())
+            elif isinstance(item, str):
+                m = re.search(r'\d+', item)
+                if m:
+                    grades.add(m.group())
+    if user_doc.get('assigned_grade'):
+        m = re.search(r'\d+', str(user_doc.get('assigned_grade')))
+        if m:
+            grades.add(m.group())
+    if user_doc.get('grade'):
+        m = re.search(r'\d+', str(user_doc.get('grade')))
+        if m:
+            grades.add(m.group())
+    return sorted(list(grades), key=lambda x: int(x) if x.isdigit() else x)
+
+
 @video_bp.route('', methods=['GET'])
 @jwt_required()
 def get_videos():
-    """Get all videos with optional filters for subject_id, category_id, chapter_id, grade, and search."""
+    """Get all videos with role-enforced grade restrictions."""
     db = current_app.config['db']
+    user_id = get_jwt_identity()
+    user = db.users.find_one({'_id': ObjectId(user_id)}) if ObjectId.is_valid(user_id) else None
+    jwt_claims = get_jwt()
+    user_role = (jwt_claims.get('role') or (user.get('role') if user else '')).lower()
+
     subject_id = request.args.get('subject_id', '').strip()
     category_id = request.args.get('category_id', '').strip()
     chapter_id = request.args.get('chapter_id', '').strip()
@@ -64,8 +100,35 @@ def get_videos():
         query['category_id'] = category_id
     if chapter_id:
         query['chapter_id'] = chapter_id
-    if grade and grade != 'all':
-        query['grade'] = grade
+
+    # Strict role-based grade enforcement:
+    if user_role == 'student':
+        # Student MUST ONLY see videos of their enrolled grade
+        student_grade = ''
+        if user and user.get('grade'):
+            m = re.search(r'\d+', str(user.get('grade')))
+            if m:
+                student_grade = m.group()
+        if not student_grade:
+            student_grade = '7'
+        query['grade'] = student_grade
+
+    elif user_role == 'teacher':
+        # Teacher MUST ONLY see videos of their assigned grade(s)
+        teacher_grades = get_teacher_assigned_grades(user)
+        if teacher_grades:
+            if grade and grade != 'all' and grade in teacher_grades:
+                query['grade'] = grade
+            else:
+                query['grade'] = {'$in': teacher_grades}
+        else:
+            if grade and grade != 'all':
+                query['grade'] = grade
+    else:
+        # Admin or other
+        if grade and grade != 'all':
+            query['grade'] = grade
+
     if search:
         query['$or'] = [
             {'title': {'$regex': search, '$options': 'i'}},
@@ -97,24 +160,56 @@ def get_videos():
 @video_bp.route('/hierarchy', methods=['GET'])
 @jwt_required()
 def get_video_hierarchy():
-    """Return nested Subject -> Category -> Chapter structure with attached video count and items."""
+    """Return nested Subject -> Category -> Chapter structure with role-enforced grade restrictions."""
     db = current_app.config['db']
+    user_id = get_jwt_identity()
+    user = db.users.find_one({'_id': ObjectId(user_id)}) if ObjectId.is_valid(user_id) else None
+    jwt_claims = get_jwt()
+    user_role = (jwt_claims.get('role') or (user.get('role') if user else '')).lower()
     grade = request.args.get('grade', '').strip()
 
-    # 1. Fetch all subjects
+    # 1. Fetch active subjects
     subjects = list(db.subjects.find({'status': 'active'}).sort('name', 1))
 
     # 2. Fetch categories
     categories = list(db.categories.find({'status': 'active'}).sort('name', 1))
 
-    # 3. Fetch chapters
+    # 3. Chapter and video queries with strict grade isolation
     chapter_query = {'status': 'active'}
-    if grade and grade != 'all':
-        chapter_query['grade'] = grade
-    chapters = list(db.chapters.find(chapter_query).sort([('grade', 1), ('order', 1), ('name', 1)]))
+    video_query = {}
 
-    # 4. Fetch all videos
-    all_videos = list(db.videos.find().sort([('created_at', -1)]))
+    if user_role == 'student':
+        student_grade = ''
+        if user and user.get('grade'):
+            m = re.search(r'\d+', str(user.get('grade')))
+            if m:
+                student_grade = m.group()
+        if not student_grade:
+            student_grade = '7'
+        chapter_query['grade'] = student_grade
+        video_query['grade'] = student_grade
+
+    elif user_role == 'teacher':
+        teacher_grades = get_teacher_assigned_grades(user)
+        if teacher_grades:
+            if grade and grade != 'all' and grade in teacher_grades:
+                chapter_query['grade'] = grade
+                video_query['grade'] = grade
+            else:
+                chapter_query['grade'] = {'$in': teacher_grades}
+                video_query['grade'] = {'$in': teacher_grades}
+        else:
+            if grade and grade != 'all':
+                chapter_query['grade'] = grade
+                video_query['grade'] = grade
+    else:
+        # Admin or other
+        if grade and grade != 'all':
+            chapter_query['grade'] = grade
+            video_query['grade'] = grade
+
+    chapters = list(db.chapters.find(chapter_query).sort([('grade', 1), ('order', 1), ('name', 1)]))
+    all_videos = list(db.videos.find(video_query).sort([('created_at', -1)]))
 
     # Map videos by chapter_id
     videos_by_chapter = {}
@@ -191,13 +286,35 @@ def get_video_hierarchy():
 @video_bp.route('/<id>', methods=['GET'])
 @jwt_required()
 def get_video(id):
-    """Get single video details."""
+    """Get single video details with strict grade isolation."""
     db = current_app.config['db']
+    user_id = get_jwt_identity()
+    user = db.users.find_one({'_id': ObjectId(user_id)}) if ObjectId.is_valid(user_id) else None
+    jwt_claims = get_jwt()
+    user_role = (jwt_claims.get('role') or (user.get('role') if user else '')).lower()
+
     try:
         video = db.videos.find_one({'_id': ObjectId(id)})
         if not video:
             return jsonify({'success': False, 'message': 'Video not found'}), 404
-            
+
+        vid_grade = str(video.get('grade', '')).strip()
+
+        # Grade isolation check
+        if user_role == 'student':
+            student_grade = ''
+            if user and user.get('grade'):
+                m = re.search(r'\d+', str(user.get('grade')))
+                if m:
+                    student_grade = m.group()
+            if student_grade and vid_grade and vid_grade != 'all' and vid_grade != student_grade:
+                return jsonify({'success': False, 'message': f'This video lesson is restricted to Grade {vid_grade} students only'}), 403
+
+        elif user_role == 'teacher':
+            teacher_grades = get_teacher_assigned_grades(user)
+            if teacher_grades and vid_grade and vid_grade != 'all' and vid_grade not in teacher_grades:
+                return jsonify({'success': False, 'message': f'This video lesson is outside your assigned grades ({", ".join(teacher_grades)})'}), 403
+
         video['_id'] = str(video['_id'])
         vid_id = video.get('youtube_video_id', '')
         video['thumbnail_url'] = f"https://img.youtube.com/vi/{vid_id}/hqdefault.jpg" if vid_id else ""
@@ -221,11 +338,13 @@ def get_video(id):
 @jwt_required()
 @role_required('teacher', 'admin')
 def create_video():
-    """Create and link a new YouTube video lesson to Subject -> Category -> Chapter."""
+    """Create and link a new YouTube video lesson to Subject -> Category -> Chapter with grade authorization."""
     db = current_app.config['db']
     user_id = get_jwt_identity()
     user = db.users.find_one({'_id': ObjectId(user_id)})
     teacher_name = user.get('full_name', 'Teacher') if user else 'Teacher'
+    jwt_claims = get_jwt()
+    user_role = (jwt_claims.get('role') or (user.get('role') if user else '')).lower()
 
     data = request.get_json(silent=True) or {}
     title = sanitize_string(data.get('title', '')).strip()
@@ -267,6 +386,16 @@ def create_video():
     if chapter and chapter.get('grade'):
         grade = str(chapter.get('grade'))
 
+    # If teacher, verify that grade is in teacher's assigned grades
+    if user_role == 'teacher':
+        teacher_grades = get_teacher_assigned_grades(user)
+        if teacher_grades and grade not in teacher_grades:
+            return jsonify({
+                'success': False,
+                'message': f'You are only authorized to publish videos for your assigned grade(s): Grade {", ".join(teacher_grades)}',
+                'error_code': 'UNAUTHORIZED_GRADE'
+            }), 403
+
     now = datetime.utcnow()
     video_doc = {
         'title': title,
@@ -295,7 +424,7 @@ def create_video():
 
     return jsonify({
         'success': True,
-        'message': f'Video "{title}" linked successfully to chapter "{chapter_name}"!',
+        'message': f'Video "{title}" linked successfully to chapter "{chapter_name}" (Grade {grade})!',
         'data': video_doc
     }), 201
 
@@ -304,14 +433,27 @@ def create_video():
 @jwt_required()
 @role_required('teacher', 'admin')
 def update_video(id):
-    """Update an existing video lesson."""
+    """Update an existing video lesson with grade authorization."""
     db = current_app.config['db']
+    user_id = get_jwt_identity()
+    user = db.users.find_one({'_id': ObjectId(user_id)}) if ObjectId.is_valid(user_id) else None
+    jwt_claims = get_jwt()
+    user_role = (jwt_claims.get('role') or (user.get('role') if user else '')).lower()
     data = request.get_json(silent=True) or {}
     
     try:
         existing = db.videos.find_one({'_id': ObjectId(id)})
         if not existing:
             return jsonify({'success': False, 'message': 'Video not found'}), 404
+
+        if user_role == 'teacher':
+            teacher_grades = get_teacher_assigned_grades(user)
+            existing_grade = str(existing.get('grade', '')).strip()
+            if teacher_grades and existing_grade and existing_grade not in teacher_grades:
+                return jsonify({
+                    'success': False,
+                    'message': f'You are only authorized to modify videos for your assigned grade(s): Grade {", ".join(teacher_grades)}'
+                }), 403
 
         update_fields = {'updated_at': datetime.utcnow()}
 
@@ -336,7 +478,15 @@ def update_video(id):
             update_fields['duration'] = sanitize_string(data['duration']).strip()
 
         if 'grade' in data:
-            update_fields['grade'] = str(data['grade']).strip()
+            new_grade = str(data['grade']).strip()
+            if user_role == 'teacher':
+                teacher_grades = get_teacher_assigned_grades(user)
+                if teacher_grades and new_grade not in teacher_grades:
+                    return jsonify({
+                        'success': False,
+                        'message': f'You cannot change grade to {new_grade}. Allowed: Grade {", ".join(teacher_grades)}'
+                    }), 403
+            update_fields['grade'] = new_grade
 
         # If subject/category/chapter changed
         if 'subject_id' in data:
@@ -357,7 +507,15 @@ def update_video(id):
             if ch:
                 update_fields['chapter_name'] = ch.get('name', 'General')
                 if ch.get('grade'):
-                    update_fields['grade'] = str(ch.get('grade'))
+                    ch_grade = str(ch.get('grade'))
+                    if user_role == 'teacher':
+                        teacher_grades = get_teacher_assigned_grades(user)
+                        if teacher_grades and ch_grade not in teacher_grades:
+                            return jsonify({
+                                'success': False,
+                                'message': f'Selected chapter belongs to Grade {ch_grade}, which is outside your assigned grades'
+                            }), 403
+                    update_fields['grade'] = ch_grade
 
         db.videos.update_one({'_id': ObjectId(id)}, {'$set': update_fields})
         updated = db.videos.find_one({'_id': ObjectId(id)})
@@ -375,12 +533,28 @@ def update_video(id):
 @jwt_required()
 @role_required('teacher', 'admin')
 def delete_video(id):
-    """Delete a video lesson."""
+    """Delete a video lesson with grade authorization."""
     db = current_app.config['db']
+    user_id = get_jwt_identity()
+    user = db.users.find_one({'_id': ObjectId(user_id)}) if ObjectId.is_valid(user_id) else None
+    jwt_claims = get_jwt()
+    user_role = (jwt_claims.get('role') or (user.get('role') if user else '')).lower()
+
     try:
-        result = db.videos.delete_one({'_id': ObjectId(id)})
-        if result.deleted_count == 0:
+        existing = db.videos.find_one({'_id': ObjectId(id)})
+        if not existing:
             return jsonify({'success': False, 'message': 'Video not found'}), 404
+
+        if user_role == 'teacher':
+            teacher_grades = get_teacher_assigned_grades(user)
+            existing_grade = str(existing.get('grade', '')).strip()
+            if teacher_grades and existing_grade and existing_grade not in teacher_grades:
+                return jsonify({
+                    'success': False,
+                    'message': f'You are only authorized to delete videos for your assigned grade(s): Grade {", ".join(teacher_grades)}'
+                }), 403
+
+        db.videos.delete_one({'_id': ObjectId(id)})
         return jsonify({'success': True, 'message': 'Video lesson deleted successfully'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 400

@@ -94,7 +94,6 @@ export default function AdminDashboard() {
     Science: '#10b981',
     Technology: '#8b5cf6',
     Mathematics: '#f59e0b',
-    Engineering: '#3b82f6',
     English: '#ec4899',
   };
 
