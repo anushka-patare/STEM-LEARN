@@ -117,7 +117,7 @@ def get_student_subjects():
     user = db.users.find_one({'_id': ObjectId(user_id)})
     grade = user.get('grade', '') if user else ''
 
-    subjects = list(db.subjects.find({'status': 'active'}).sort('name', 1))
+    subjects = list(db.subjects.find({'status': {'$ne': 'inactive'}}).sort('name', 1))
     for s in subjects:
         s['_id'] = str(s['_id'])
     return jsonify({'success': True, 'data': subjects})

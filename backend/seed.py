@@ -96,12 +96,14 @@ def seed_database():
         {'name': 'Science', 'icon': '🔬', 'description': 'Explore the natural world through Physics, Chemistry, and Biology'},
         {'name': 'Technology', 'icon': '💻', 'description': 'Learn about computers, coding, and digital systems'},
         {'name': 'Mathematics', 'icon': '📐', 'description': 'Master numbers, algebra, geometry, and problem solving'},
+        {'name': 'English', 'icon': '📚', 'description': 'Master English grammar, reading comprehension, literature, and communication'},
     ]
     subject_ids = {}
     for subj in subjects_data:
         existing = db.subjects.find_one({'name': subj['name']})
         if existing:
             subject_ids[subj['name']] = str(existing['_id'])
+            db.subjects.update_one({'_id': existing['_id']}, {'$set': {'status': 'active', 'updated_at': now}})
         else:
             result = db.subjects.insert_one({
                 **subj,
@@ -122,6 +124,9 @@ def seed_database():
         {'name': 'Digital Literacy', 'subject': 'Technology', 'description': 'Understanding digital tools and safety'},
         {'name': 'Algebra', 'subject': 'Mathematics', 'description': 'Variables, expressions, and equations'},
         {'name': 'Geometry', 'subject': 'Mathematics', 'description': 'Shapes, angles, and spatial reasoning'},
+        {'name': 'Grammar & Vocabulary', 'subject': 'English', 'description': 'Sentence construction, tenses, modals, and vocabulary mastery'},
+        {'name': 'Reading Comprehension & Prose', 'subject': 'English', 'description': 'Passage reading comprehension, literature stories, and prose analysis'},
+        {'name': 'Writing & Communication Skills', 'subject': 'English', 'description': 'Creative writing, essays, formal letters, and communication'},
     ]
     category_ids = {}
     for cat in categories_data:
@@ -129,6 +134,7 @@ def seed_database():
         existing = db.categories.find_one({'name': cat['name'], 'subject_id': sid})
         if existing:
             category_ids[cat['name']] = str(existing['_id'])
+            db.categories.update_one({'_id': existing['_id']}, {'$set': {'status': 'active', 'updated_at': now}})
         else:
             result = db.categories.insert_one({
                 'name': cat['name'],

@@ -168,14 +168,14 @@ def get_video_hierarchy():
     user_role = (jwt_claims.get('role') or (user.get('role') if user else '')).lower()
     grade = request.args.get('grade', '').strip()
 
-    # 1. Fetch active subjects
-    subjects = list(db.subjects.find({'status': 'active'}).sort('name', 1))
+    # 1. Fetch active subjects (support status: active or unpopulated status)
+    subjects = list(db.subjects.find({'status': {'$ne': 'inactive'}}).sort('name', 1))
 
     # 2. Fetch categories
-    categories = list(db.categories.find({'status': 'active'}).sort('name', 1))
+    categories = list(db.categories.find({'status': {'$ne': 'inactive'}}).sort('name', 1))
 
     # 3. Chapter and video queries with strict grade isolation
-    chapter_query = {'status': 'active'}
+    chapter_query = {'status': {'$ne': 'inactive'}}
     video_query = {}
 
     if user_role == 'student':
