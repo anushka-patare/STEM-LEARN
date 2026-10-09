@@ -303,12 +303,14 @@ All portals use **Username + Password** authentication. You can sign in immediat
   - **Solo Competitive Leaderboard**: Filtered by class & division with gold/silver/bronze badges and speed bonuses.
   - **Collaborative Squads**: Unified dropdown menu for *All Squad Teams*, *Join a Squad*, and *My Squad Team* with shared squad points.
 - **Comprehensive Progress Analytics**: Visualized radar charts, topic-level accuracy bars, attempt timeline, and unlock status.
+- **STEM Video Lessons Classroom**: Structured YouTube educational lectures mapped by **Subject → Category → Chapter** with theater-mode player, completion tracking, and quiz shortcuts.
 - **24/7 AI STEM Assistant**: Powered by Groq LLM with full Markdown formula formatting and friendly explanations.
 
 ### 👩‍🏫 2. Teacher Portal (`/teacher/*`)
 - **Cohort & Class Management**: Manage Grade 6–9 classes, student rosters, and assign competitive/collaborative learning modes.
 - **Curriculum & Quiz Builder**: Create timed quizzes with custom passing criteria, points per question, and prerequisite sequencing.
 - **AI Quiz Generator**: One-click quiz question generation using Groq / Gemini with difficulty calibration and instant saving into item banks.
+- **YouTube Video Lessons Management**: Link educational YouTube video lectures mapped by **Subject → Category → Chapter**, with live URL validation, duration tags, and student publishing.
 - **Anti-Cheat Supervisor & Audit**: Detects fullscreen exits, tab switches, and suspicious timestamps with options to *Accept*, *Invalidate*, or *Permit Retake*.
 - **Squad Teams Allocation**: Create squads, generate unique squad join codes, and select score calculation policies (Average vs. Top Score).
 - **ANOVA Telemetry & SPSS Export**: Review descriptive statistics and download anonymized CSV datasets for academic research.

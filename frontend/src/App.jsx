@@ -31,6 +31,7 @@ import StudentTeam from './pages/student/Team';
 import StudentProgress from './pages/student/Progress';
 import StudentAiAssistant from './pages/student/AiAssistant';
 import StudentProfile from './pages/student/Profile';
+import StudentVideos from './pages/student/Videos';
 
 // Teacher Portal Pages
 import TeacherDashboard from './pages/teacher/Dashboard';
@@ -43,6 +44,7 @@ import TeacherQuestions from './pages/teacher/Questions';
 import TeacherPerformance from './pages/teacher/Performance';
 import TeacherTeams from './pages/teacher/Teams';
 import TeacherProfile from './pages/teacher/Profile';
+import TeacherVideos from './pages/teacher/Videos';
 
 // Admin Portal Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -119,6 +121,7 @@ export default function App() {
         <Route path="leaderboard" element={<StudentLeaderboard />} />
         <Route path="team" element={<StudentTeam />} />
         <Route path="progress" element={<StudentProgress />} />
+        <Route path="videos" element={<StudentVideos />} />
         <Route path="ai-assistant" element={<StudentAiAssistant />} />
         <Route path="profile" element={<StudentProfile />} />
       </Route>
@@ -142,6 +145,7 @@ export default function App() {
         <Route path="questions" element={<TeacherQuestions />} />
         <Route path="performance" element={<TeacherPerformance />} />
         <Route path="teams" element={<TeacherTeams />} />
+        <Route path="videos" element={<TeacherVideos />} />
         <Route path="leaderboard" element={<Navigate to="/teacher/performance" replace />} />
         <Route path="research" element={<Navigate to="/teacher/performance" replace />} />
         <Route path="ai-generator" element={<Navigate to="/teacher/quizzes/create" replace />} />

@@ -306,4 +306,14 @@ export const pageService = {
   updatePageContent: (pageKey, data) => api.put(`/pages/${pageKey}`, data),
 };
 
+// ─── VIDEO LESSON SERVICES ──────────────────────────────────
+export const videoService = {
+  getAll: (params) => api.get('/videos', { params }),
+  getById: (id) => api.get(`/videos/${id}`),
+  create: (data) => api.post('/videos', data),
+  update: (id, data) => api.put(`/videos/${id}`, data),
+  delete: (id) => api.delete(`/videos/${id}`),
+  getHierarchy: (params) => api.get('/videos/hierarchy', { params }),
+};
+
 export default api;

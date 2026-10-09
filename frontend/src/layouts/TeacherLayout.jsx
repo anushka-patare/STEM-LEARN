@@ -17,7 +17,8 @@ import {
   FiChevronUp,
   FiPlusCircle,
   FiList,
-  FiTrendingUp
+  FiTrendingUp,
+  FiVideo
 } from 'react-icons/fi';
 
 export default function TeacherLayout() {
@@ -76,6 +77,7 @@ export default function TeacherLayout() {
     },
     { to: '/teacher/performance', icon: FiTrendingUp, label: 'Student Performance' },
     { to: '/teacher/teams', icon: FiUsers, label: 'Student Teams' },
+    { to: '/teacher/videos', icon: FiVideo, label: 'Video Lessons' },
     { to: '/teacher/profile', icon: FiUser, label: 'Profile' },
   ];
 

@@ -86,6 +86,17 @@ def run_tests():
     }, headers=h_student)
     print("AI Student Tutor:", r.status_code, "Reply preview:", r.get_json().get('data', {}).get('response', '')[:80] + '...')
 
+    print("\n--- 7. VIDEO LESSONS MULTIMEDIA ENDPOINTS ---")
+    r_vids = client.get('/api/videos', headers=h_student)
+    assert r_vids.status_code == 200, f"Videos list failed: {r_vids.status_code}"
+    vids_data = r_vids.get_json().get('data', [])
+    print("Student Videos List:", r_vids.status_code, "Count:", len(vids_data))
+
+    r_hier = client.get('/api/videos/hierarchy', headers=h_teacher)
+    assert r_hier.status_code == 200, f"Videos hierarchy failed: {r_hier.status_code}"
+    hier_data = r_hier.get_json().get('data', [])
+    print("Teacher Videos Hierarchy:", r_hier.status_code, "Subjects:", len(hier_data))
+
     print("\n==========================================")
     print("ALL API ENDPOINTS AND SYSTEM CHECKS PASSED!")
     print("==========================================\n")

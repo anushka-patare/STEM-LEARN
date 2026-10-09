@@ -20,7 +20,8 @@ import {
   FiChevronUp,
   FiList,
   FiKey,
-  FiShield
+  FiShield,
+  FiVideo
 } from 'react-icons/fi';
 
 export default function StudentLayout() {
@@ -77,6 +78,7 @@ export default function StudentLayout() {
       ]
     },
     { to: '/student/progress', icon: FiTrendingUp, label: 'My Progress' },
+    { to: '/student/videos', icon: FiVideo, label: 'Video Lessons' },
     { to: '/student/ai-assistant', icon: FiCpu, label: 'AI Study Assistant' },
     { to: '/student/profile', icon: FiUser, label: 'Profile' },
   ];

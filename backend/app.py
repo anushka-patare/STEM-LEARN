@@ -130,6 +130,7 @@ def create_app(config_name=None):
     from routes.security_routes import security_bp
     from routes.ai_routes import ai_bp
     from routes.page_content_routes import page_bp
+    from routes.video_routes import video_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
@@ -149,6 +150,7 @@ def create_app(config_name=None):
     app.register_blueprint(security_bp, url_prefix='/api/security')
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
     app.register_blueprint(page_bp, url_prefix='/api/pages')
+    app.register_blueprint(video_bp, url_prefix='/api/videos')
 
     # Serve uploaded files
     @app.route('/uploads/<path:filename>')
@@ -249,6 +251,10 @@ def setup_indexes(db):
         # Teams
         db.teams.create_index('class_id')
         db.team_members.create_index([('team_id', 1), ('student_id', 1)])
+
+        # Videos
+        db.videos.create_index([('subject_id', 1), ('chapter_id', 1)])
+        db.videos.create_index('created_at')
 
         print('✅ Database indexes created')
     except Exception as e:
