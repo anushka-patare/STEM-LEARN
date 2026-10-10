@@ -42,22 +42,12 @@ def create_app(config_name=None):
     app.json = CustomJSONProvider(app)
     app.config.from_object(config.get(config_name, config['default']))
 
-    # CORS
+    # CORS - Allow local and deployed frontend origins (e.g. Render, Vercel)
     CORS(app, resources={
-        r"/api/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://localhost:3000",
-                "http://127.0.0.1:5173",
-                "http://127.0.0.1:5174",
-                "http://127.0.0.1:5175",
-                r"^http:\/\/localhost:\d+$",
-                r"^http:\/\/127\.0\.0\.1:\d+$"
-            ],
+        r"/*": {
+            "origins": "*",
             "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
             "supports_credentials": True
         }
     })
@@ -166,6 +156,18 @@ def create_app(config_name=None):
     @app.route('/uploads/<path:filename>')
     def uploaded_file(filename):
         return send_from_directory(upload_folder, filename)
+
+    # Root status endpoint for browser and service uptime checks
+    @app.route('/')
+    @app.route('/api')
+    def root_status():
+        return jsonify({
+            'success': True,
+            'status': 'healthy',
+            'message': 'STEMLearn Backend API is online and running',
+            'health_check': '/api/health',
+            'version': '1.0.0'
+        }), 200
 
     # Health check
     @app.route('/api/health')
