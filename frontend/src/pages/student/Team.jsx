@@ -54,13 +54,15 @@ export default function StudentTeam() {
     setSearchParams({ view: newTab });
   };
 
+  const studentGrade = user?.grade ? String(user.grade).replace('Grade', '').trim() : '';
+
   const [team, setTeam] = useState(null);
   const [allSquads, setAllSquads] = useState([]);
   const [performance, setPerformance] = useState(null);
   const [squadQuizzes, setSquadQuizzes] = useState([]);
   const [squadLeaderboard, setSquadLeaderboard] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('all');
-  const [leaderboardGrade, setLeaderboardGrade] = useState('all');
+  const [leaderboardGrade, setLeaderboardGrade] = useState(studentGrade || '9');
 
   const [loading, setLoading] = useState(true);
   const [loadingExtra, setLoadingExtra] = useState(false);
@@ -68,7 +70,11 @@ export default function StudentTeam() {
   const [joining, setJoining] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
-  const studentGrade = user?.grade ? String(user.grade).replace('Grade', '').trim() : '';
+  useEffect(() => {
+    if (studentGrade && (!leaderboardGrade || leaderboardGrade === 'all')) {
+      setLeaderboardGrade(studentGrade);
+    }
+  }, [studentGrade]);
 
   // 1. Fetch student's own squad
   const fetchMyTeam = async () => {
@@ -133,10 +139,13 @@ export default function StudentTeam() {
     }
   };
 
-  // 5. Fetch collaborative squad leaderboard
-  const fetchSquadLeaderboard = async () => {
+  // 5. Fetch collaborative squad leaderboard strictly from real DB records
+  const fetchSquadLeaderboard = async (gradeOverride) => {
     try {
-      const res = await leaderboardService.getTeam();
+      const g = gradeOverride !== undefined ? gradeOverride : leaderboardGrade;
+      const targetGrade = (g && g !== 'all') ? g : (studentGrade || undefined);
+      const params = targetGrade ? { grade: targetGrade } : {};
+      const res = await leaderboardService.getTeam(params);
       const raw = res.data?.data?.team_wise || res.data?.data || res.data;
       if (Array.isArray(raw)) {
         setSquadLeaderboard(raw);
@@ -149,12 +158,17 @@ export default function StudentTeam() {
     }
   };
 
+  const handleGradeFilterChange = (g) => {
+    setLeaderboardGrade(g);
+    fetchSquadLeaderboard(g);
+  };
+
   const loadData = async () => {
     setLoading(true);
     const myTeamData = await fetchMyTeam();
     await Promise.all([
       fetchAllSquads(),
-      fetchSquadLeaderboard(),
+      fetchSquadLeaderboard(studentGrade || '9'),
       myTeamData ? fetchPerformance() : Promise.resolve(),
       fetchSquadQuizzes()
     ]);
@@ -173,13 +187,13 @@ export default function StudentTeam() {
     } else if (activeTab === 'squad_quizzes' && squadQuizzes.length === 0) {
       setLoadingExtra(true);
       fetchSquadQuizzes().finally(() => setLoadingExtra(false));
-    } else if (activeTab === 'squad_leaderboard' && squadLeaderboard.length === 0) {
+    } else if (activeTab === 'squad_leaderboard') {
       setLoadingExtra(true);
       fetchSquadLeaderboard().finally(() => setLoadingExtra(false));
     }
   }, [activeTab, team]);
 
-  // Join Team Handler
+  // Join Team Handler by Code (with switch support)
   const handleJoinByCode = async (e) => {
     if (e) e.preventDefault();
     const codeToUse = joinCode.trim().toUpperCase();
@@ -187,9 +201,15 @@ export default function StudentTeam() {
       toast.error('Please enter a team code');
       return;
     }
+    if (team) {
+      const confirmSwitch = window.confirm(
+        `You are currently enrolled in "${team.name}". Each student can belong to 1 squad at a time.\n\nDo you want to leave "${team.name}" and join the new squad?`
+      );
+      if (!confirmSwitch) return;
+    }
     setJoining(true);
     try {
-      const res = await teamService.joinTeam({ code: codeToUse });
+      const res = await teamService.joinTeam({ code: codeToUse, switch: Boolean(team) });
       if (res.data?.success) {
         toast.success(res.data?.message || 'Successfully joined squad!');
         setJoinCode('');
@@ -205,12 +225,23 @@ export default function StudentTeam() {
     }
   };
 
+  // Join or Switch Team by Squad ID
   const handleJoinByTeamId = async (teamId, teamName) => {
+    if (team && String(team._id) === String(teamId)) {
+      toast('You are already a member of this squad!');
+      return;
+    }
+    if (team) {
+      const confirmSwitch = window.confirm(
+        `You are currently enrolled in "${team.name}". Each student can belong to 1 squad at a time.\n\nDo you want to leave "${team.name}" and switch to "${teamName}"?`
+      );
+      if (!confirmSwitch) return;
+    }
     setJoining(true);
     try {
-      const res = await teamService.joinTeam({ team_id: teamId });
+      const res = await teamService.joinTeam({ team_id: teamId, switch: Boolean(team) });
       if (res.data?.success) {
-        toast.success(`Successfully joined "${teamName}"!`);
+        toast.success(res.data?.message || `Successfully joined "${teamName}"!`);
         await loadData();
         handleTabChange('my_squad');
       } else {
@@ -1037,7 +1068,7 @@ export default function StudentTeam() {
                     <button
                       key={g}
                       type="button"
-                      onClick={() => setLeaderboardGrade(g)}
+                      onClick={() => handleGradeFilterChange(g)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         leaderboardGrade === g
                           ? 'bg-purple-600 text-white shadow-xs'
@@ -1060,8 +1091,8 @@ export default function StudentTeam() {
                 </div>
               ) : (
                 <>
-                  {/* Top 3 Podium (if >= 2 teams) */}
-                  {filteredLeaderboard.length >= 2 && (
+                  {/* Top 3 Podium (Only when top team has scored XP > 0) */}
+                  {filteredLeaderboard.length >= 2 && filteredLeaderboard[0]?.total_score > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end pt-4">
                       {/* 2nd Place */}
                       {filteredLeaderboard[1] && (
@@ -1073,7 +1104,7 @@ export default function StudentTeam() {
                             {filteredLeaderboard[1].name}
                           </h4>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            Grade {filteredLeaderboard[1].grade || '7'} • {filteredLeaderboard[1].member_count || 0} Members
+                            Grade {filteredLeaderboard[1].grade || studentGrade || '9'} • {filteredLeaderboard[1].member_count || 0} Members
                           </p>
                           <div className="mt-3 text-lg font-black text-purple-600">
                             {filteredLeaderboard[1].total_score} XP
@@ -1097,7 +1128,7 @@ export default function StudentTeam() {
                             {filteredLeaderboard[0].name}
                           </h4>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            Grade {filteredLeaderboard[0].grade || '7'} • {filteredLeaderboard[0].member_count || 0} Members
+                            Grade {filteredLeaderboard[0].grade || studentGrade || '9'} • {filteredLeaderboard[0].member_count || 0} Members
                           </p>
                           <div className="mt-3 text-2xl font-black text-amber-600">
                             {filteredLeaderboard[0].total_score} XP
@@ -1118,7 +1149,7 @@ export default function StudentTeam() {
                             {filteredLeaderboard[2].name}
                           </h4>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            Grade {filteredLeaderboard[2].grade || '7'} • {filteredLeaderboard[2].member_count || 0} Members
+                            Grade {filteredLeaderboard[2].grade || studentGrade || '9'} • {filteredLeaderboard[2].member_count || 0} Members
                           </p>
                           <div className="mt-3 text-lg font-black text-purple-600">
                             {filteredLeaderboard[2].total_score} XP
@@ -1128,6 +1159,20 @@ export default function StudentTeam() {
                           </div>
                         </div>
                       )}
+                    </div>
+                  ) : (
+                    <div className="bg-gradient-to-r from-purple-50/80 via-white to-indigo-50/80 rounded-3xl p-6 sm:p-8 border border-purple-200/80 text-center space-y-3 shadow-2xs">
+                      <div className="w-12 h-12 mx-auto rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center shadow-xs">
+                        <FiZap className="w-6 h-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-base sm:text-lg font-black text-slate-900">
+                          Grade {leaderboardGrade === 'all' ? (studentGrade || '9') : leaderboardGrade} Collaborative Standings
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
+                          Squad rankings are live and authentic from real test completions. Complete collaborative quizzes from the <strong>Squad Quizzes</strong> tab to earn points and claim #1 on the leaderboard!
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -1240,16 +1285,42 @@ export default function StudentTeam() {
              ══════════════════════════════════════════════════════════════ */}
           {activeTab === 'all_squads' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-black text-slate-900">
                     All Active Squad Teams ({allSquads.length})
                   </h2>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Explore squads created for Class {studentGrade || '7'}. Join an open squad to collaborate on tests.
+                    Explore collaborative squads created for Grade {studentGrade || '9'}. Join an open squad to collaborate on tests.
                   </p>
                 </div>
               </div>
+
+              {team && (
+                <div className="bg-purple-50/80 border border-purple-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black shrink-0 shadow-xs">
+                      <FiCheckCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-purple-950">
+                        Enrolled in: {team.name} (Grade {team.grade || studentGrade || '9'})
+                      </h4>
+                      <p className="text-[11px] text-purple-700">
+                        Students can belong to 1 squad at a time. Click "Switch Squad" below on another squad if you wish to transfer.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLeaveTeam}
+                    disabled={leaving}
+                    className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 text-xs font-bold transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    {leaving ? 'Leaving...' : 'Leave Squad'}
+                  </button>
+                </div>
+              )}
 
               {allSquads.length === 0 ? (
                 <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-12 text-center">
@@ -1280,7 +1351,7 @@ export default function StudentTeam() {
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 block">
-                                Grade {sq.grade || studentGrade || '7'}{sq.division ? ` - ${sq.division}` : ''}
+                                Grade {sq.grade || studentGrade || '9'}{sq.division ? ` - ${sq.division}` : ''}
                               </span>
                               <h3 className="text-base font-black text-slate-900 mt-0.5">
                                 {sq.name}
@@ -1360,7 +1431,7 @@ export default function StudentTeam() {
                           {isMyTeam ? (
                             <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
                               <FiCheckCircle className="w-4 h-4" />
-                              <span>Joined</span>
+                              <span>Active Squad</span>
                             </span>
                           ) : isFull ? (
                             <button
@@ -1368,6 +1439,15 @@ export default function StudentTeam() {
                               className="px-3.5 py-1.5 rounded-xl bg-slate-100 text-slate-400 text-xs font-bold cursor-not-allowed"
                             >
                               Squad Full
+                            </button>
+                          ) : team ? (
+                            <button
+                              type="button"
+                              onClick={() => handleJoinByTeamId(sq._id, sq.name)}
+                              disabled={joining}
+                              className="px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                            >
+                              {joining ? 'Switching...' : 'Switch Squad'}
                             </button>
                           ) : (
                             <button
@@ -1406,6 +1486,18 @@ export default function StudentTeam() {
                   </p>
                 </div>
 
+                {team && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-left text-xs text-amber-900 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <FiShield className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span>Currently Enrolled in "{team.name}"</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800">
+                      Entering another squad's code below will transfer your enrollment to the new squad upon confirmation.
+                    </p>
+                  </div>
+                )}
+
                 <form onSubmit={handleJoinByCode} className="space-y-4 text-left bg-slate-50 p-6 rounded-2xl border border-slate-200/80">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -1428,7 +1520,13 @@ export default function StudentTeam() {
                     className="w-full stem-btn bg-purple-600 hover:bg-purple-700 text-white py-3.5 text-xs font-black uppercase tracking-wider rounded-xl shadow-md cursor-pointer disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                   >
                     <FiUsers className="w-4 h-4" />
-                    <span>{joining ? 'Connecting to Squad...' : 'Confirm & Join Squad'}</span>
+                    <span>
+                      {joining
+                        ? 'Connecting to Squad...'
+                        : team
+                        ? 'Confirm & Switch Squad'
+                        : 'Confirm & Join Squad'}
+                    </span>
                   </button>
                 </form>
 

@@ -464,7 +464,7 @@ def get_team():
         })
     team['members'] = formatted_members
     team['member_count'] = len(formatted_members)
-    team['total_score'] = max(int(team.get('total_score', 0)), total_points)
+    team['total_score'] = total_points
 
     return jsonify({'success': True, 'data': team})
 
@@ -596,7 +596,7 @@ def get_team_performance():
                 'member_count': len(members)
             },
             'stats': {
-                'total_points': max(int(team.get('total_score') or 0), total_squad_points),
+                'total_points': total_squad_points,
                 'quizzes_completed': total_attempts_count,
                 'quizzes_passed': passed_count,
                 'average_accuracy': avg_accuracy,

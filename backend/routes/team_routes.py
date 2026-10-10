@@ -17,8 +17,9 @@ def get_teams():
     division = request.args.get('division', '')
     query = {}
     if grade:
-        g_int = int(grade) if grade.isdigit() else grade
-        query['grade'] = {'$in': [grade, g_int]}
+        g_clean = str(grade).replace('Grade', '').strip()
+        g_int = int(g_clean) if g_clean.isdigit() else g_clean
+        query['grade'] = {'$in': [g_clean, f'Grade {g_clean}', g_int]}
     if division:
         query['division'] = division.upper()
 
@@ -40,6 +41,7 @@ def get_teams():
         t['member_count'] = len(members)
 
     return jsonify({'success': True, 'data': teams})
+
 
 
 @team_bp.route('', methods=['POST'])
@@ -292,13 +294,38 @@ def join_team():
 
     tid_str = str(team['_id'])
 
-    # Optional grade verification
-    student_grade = str(user.get('grade', '')).strip()
-    team_grade = str(team.get('grade', '')).strip()
+    # Check if student is already in a squad
+    current_team_id = user.get('team_id')
+    switch = bool(data.get('switch', False))
+    if current_team_id:
+        if str(current_team_id) == tid_str:
+            team['_id'] = tid_str
+            return jsonify({
+                'success': True,
+                'message': f'You are already a member of "{team.get("name")}"',
+                'data': team
+            })
+        elif not switch:
+            current_team = db.teams.find_one({'_id': ObjectId(current_team_id) if ObjectId.is_valid(str(current_team_id)) else current_team_id})
+            c_name = current_team.get('name') if current_team else 'another squad'
+            return jsonify({
+                'success': False,
+                'can_switch': True,
+                'current_team_name': c_name,
+                'message': f'You are already enrolled in "{c_name}". Each student can belong to 1 squad at a time. Do you want to switch to "{team.get("name")}"?'
+            }), 400
+        else:
+            # User confirmed switch: remove from previous squad first
+            db.team_members.delete_many({'student_id': str(user_id)})
+            db.users.update_one({'_id': ObjectId(user_id)}, {'$unset': {'team_id': ''}})
+
+    # Optional grade verification (normalized)
+    student_grade = str(user.get('grade', '')).replace('Grade', '').strip()
+    team_grade = str(team.get('grade', '')).replace('Grade', '').strip()
     if student_grade and team_grade and student_grade != team_grade:
         return jsonify({
             'success': False,
-            'message': f'This team belongs to Grade {team_grade}. You are enrolled in Grade {student_grade}.'
+            'message': f'This squad belongs to Grade {team_grade}. You are enrolled in Grade {student_grade}.'
         }), 400
 
     # Capacity check

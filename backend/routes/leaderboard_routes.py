@@ -118,7 +118,14 @@ def public_overview():
             item['class_rank'] = i + 1
 
     # 2. Collaborative Squads Leaderboard strictly from DB teams
-    teams_cursor = list(db.teams.find({}))
+    grade_param = request.args.get('grade')
+    teams_query = {}
+    if grade_param and str(grade_param).lower() != 'all':
+        g_clean = str(grade_param).replace('Grade', '').strip()
+        g_int = int(g_clean) if g_clean.isdigit() else g_clean
+        teams_query['grade'] = {'$in': [g_clean, f'Grade {g_clean}', g_int]}
+
+    teams_cursor = list(db.teams.find(teams_query))
     team_wise = []
 
     for t in teams_cursor:
@@ -128,7 +135,7 @@ def public_overview():
         tgrade = str(t.get('grade') or '')
         tdivision = str(t.get('division') or '')
 
-        # Query members from db.users by team_id
+        # Query members strictly from db.users by team_id
         t_oid = ObjectId(tid) if ObjectId.is_valid(tid) else None
         member_query = {
             'role': 'student',
@@ -137,13 +144,12 @@ def public_overview():
         db_members = list(db.users.find(member_query, {'password_hash': 0, 'otp_hash': 0}))
 
         member_ids_str = [str(m['_id']) for m in db_members]
-        member_count = len(db_members) or t.get('member_count', 0)
+        member_count = len(db_members)
 
-        # Calculate total score from member points
-        member_points_sum = sum(int(m.get('points', 0)) for m in db_members)
-        total_points = max(int(t.get('total_score') or t.get('total_team_points') or 0), member_points_sum)
+        # Calculate total score strictly from real member points (no mock or fixed dummy data)
+        total_points = sum(int(m.get('points', 0)) for m in db_members)
 
-        # Attempts by squad members or team_id
+        # Real quiz attempts by squad members or team_id
         team_attempts = list(db.quiz_attempts.find({
             '$or': [
                 {'team_id': tid},
@@ -152,11 +158,11 @@ def public_overview():
             'status': {'$in': ['submitted', 'completed']}
         }))
 
-        quizzes_completed = len(team_attempts) or int(t.get('quizzes_completed', 0))
+        quizzes_completed = len(team_attempts)
         if team_attempts:
             avg_accuracy = round(sum(float(a.get('score_percentage') or a.get('accuracy') or 0) for a in team_attempts) / len(team_attempts), 1)
         else:
-            avg_accuracy = float(t.get('avg_accuracy') or t.get('average_team_score') or 0.0)
+            avg_accuracy = 0.0
 
         team_wise.append({
             'team_id': tid,
@@ -180,8 +186,8 @@ def public_overview():
             'scoring_method': t.get('scoring_method', 'collaborative_aggregate')
         })
 
-    # Sort teams by total_score descending, then accuracy
-    team_wise.sort(key=lambda x: (x['total_score'], x['avg_accuracy']), reverse=True)
+    # Sort teams by total_score descending, then accuracy, quizzes completed, and member count
+    team_wise.sort(key=lambda x: (x['total_score'], x['avg_accuracy'], x['quizzes_completed'], x['member_count']), reverse=True)
     for i, t in enumerate(team_wise):
         t['rank'] = i + 1
 
