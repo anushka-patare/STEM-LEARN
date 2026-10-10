@@ -786,15 +786,14 @@ export default function TeacherVideos() {
                           </div>
                           <div>
                             <div className="font-bold text-slate-900 line-clamp-1">{vid.title}</div>
-                            <a
-                              href={vid.youtube_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] text-blue-600 hover:underline flex items-center gap-1"
+                            <button
+                              type="button"
+                              onClick={() => setPreviewVideo(vid)}
+                              className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
                             >
-                              <span>Watch on YouTube</span>
-                              <FiExternalLink className="w-2.5 h-2.5" />
-                            </a>
+                              <span>Play Video</span>
+                              <FiPlay className="w-2.5 h-2.5" />
+                            </button>
                           </div>
                         </div>
                       </td>

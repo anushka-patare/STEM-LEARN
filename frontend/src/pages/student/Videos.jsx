@@ -678,16 +678,6 @@ export default function StudentVideos() {
                     {watchedVideos.includes(activeVideo._id) ? 'Lesson Completed' : 'Mark as Completed'}
                   </span>
                 </button>
-
-                <a
-                  href={activeVideo.youtube_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors flex items-center gap-1.5"
-                >
-                  <span>Open in YouTube</span>
-                  <FiExternalLink className="w-3.5 h-3.5" />
-                </a>
               </div>
             </div>
           </div>
