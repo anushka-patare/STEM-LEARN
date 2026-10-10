@@ -68,9 +68,11 @@ STEMLearn/
 ├── backend/                           # Python Flask REST API
 │   ├── app.py                         # App factory, blueprints & index setup
 │   ├── config.py                      # Development & production configs
-│   ├── seed.py                        # Baseline curriculum & demo user seeder
+│   ├── wsgi.py                        # WSGI production server entry point
+│   ├── seed.py                        # Master database seeder (Grades 6–9, curriculum, users)
 │   ├── seed_all_questions.py          # Complete STEM question bank seeder
 │   ├── verify_all.py                  # Automated end-to-end API verification suite
+│   ├── inspect_db.py                  # Quick database summary report utility
 │   ├── requirements.txt               # Python package dependencies
 │   ├── .env                           # Environment secret keys & DB URI
 │   ├── .env.example                   # Example configuration template
@@ -81,13 +83,15 @@ STEMLearn/
 │   │   ├── admin_routes.py            # Superuser actions, teachers, audit logs
 │   │   ├── student_routes.py          # Dashboard, subjects, quizzes, teams, progress
 │   │   ├── teacher_routes.py          # Class rosters, quiz authoring, review
+│   │   ├── video_routes.py            # Subject → Category → Chapter video lessons (Grade isolated)
 │   │   ├── ai_routes.py               # Groq & Gemini quiz generator & study tutor
-│   │   ├── quiz_routes.py             # Secure exam engine & attempt submission
+│   │   ├── quiz_routes.py             # Secure exam engine, grading & points logic
 │   │   ├── leaderboard_routes.py      # Solo & Squad leaderboards
 │   │   ├── research_routes.py         # ANOVA telemetry & CSV data export
 │   │   └── page_content_routes.py     # Public CMS page editor
 │   ├── services/                      # AI LLM drivers, mail service, telemetry
 │   ├── utils/                         # Password hashing, JWT helpers, generators
+│   ├── tests/                         # PyTest automated unit & integration tests
 │   └── uploads/                       # User profile avatars (EXIF stripped)
 │
 ├── frontend/                          # React + Vite Single Page Application
@@ -99,26 +103,21 @@ STEMLearn/
 │       ├── App.jsx                    # Application routes & ProtectedRoute guards
 │       ├── context/                   # AuthContext (state, JWT session storage)
 │       ├── layouts/                   # PublicLayout, StudentLayout, TeacherLayout, AdminLayout
-│       ├── components/                # Reusable UI widgets:
-│       │   ├── Navbar.jsx             # Public dynamic header
-│       │   ├── Footer.jsx             # Platform footer
-│       │   ├── Hero.jsx               # 3D STEM Hero graphics & CTA
-│       │   └── ...                    # Cards, badges, modals
+│       ├── components/                # Reusable UI widgets (Navbar, Footer, Modals, Cards)
 │       ├── pages/
 │       │   ├── public/                # Home, About, Leaderboard, Research, ResetPassword
-│       │   ├── student/               # Dashboard, Subjects, Quizzes, QuizTake, Results,
+│       │   ├── student/               # Dashboard, Subjects, Quizzes, QuizTake, Videos, Results,
 │       │   │                          # Leaderboard, Team, Progress, AiAssistant, Profile
-│       │   ├── teacher/               # Dashboard, Classes, Students, Quizzes, QuizCreate,
+│       │   ├── teacher/               # Dashboard, Classes, Students, Quizzes, QuizCreate, Videos,
 │       │   │                          # Questions, Performance, Teams, Profile
 │       │   └── admin/                 # Dashboard, Teachers, Students, Classes, Subjects,
 │       │                              # Categories, Chapters, LoginLogs, Settings, OtherPages
 │       └── services/
 │           └── api.js                 # Axios API client with automatic token injection
 │
-├── uploads/                           # Root shared uploads storage
-├── .gitignore                         # Git exclusion rules
+├── .gitignore                         # Comprehensive Git exclusion rules
 ├── my requirement.md                  # Original academic project specification
-└── README.md                          # Comprehensive project documentation
+└── README.md                          # Complete project documentation & guide
 ```
 
 ---
@@ -326,7 +325,55 @@ All portals use **Username + Password** authentication. You can sign in immediat
 
 ---
 
-## 🤖 8. AI Configuration (Groq & Gemini)
+## 📺 8. Curriculum Video Lessons & Multimedia Hub
+
+The platform features a structured multimedia classroom for curated educational video lessons:
+
+### 🏛️ 1. Three-Tier Taxonomy Architecture
+Every video lesson is strictly cataloged under:
+$$\mathbf{Subject} \longrightarrow \mathbf{Category} \longrightarrow \mathbf{Chapter}$$
+
+- **Science (🔬)**: Physics, Chemistry, Biology (Motion, Electricity, Cells, Atoms, Heat, Work-Energy).
+- **Technology (💻)**: Programming, Digital Literacy (Coding Logic, Python Basics, Data Structures).
+- **Mathematics (📐)**: Algebra, Geometry (Linear Equations, Quadrilaterals, Mensuration, Triangles).
+- **English (📚)**: Grammar & Vocabulary, Reading Comprehension & Literature, Writing & Communication Skills.
+*(Note: Engineering has been completely removed across the database and user interfaces to match middle school curriculum standards).*
+
+### 🔒 2. Strict Role-Based Grade Isolation
+- **Student Grade Enforcement**: Students exclusively receive videos, chapters, and quizzes corresponding to their enrolled grade (Grade 6, 7, 8, or 9). Any attempt to request other grades or `?grade=all` is blocked at the backend API gateway.
+- **Teacher Assignment Enforcement**: Teachers only see and can publish videos for classes/grades explicitly assigned by the Administrator.
+- **Distraction-Free In-App Player**: Videos play in a responsive, modal-based theater iframe using `youtube-nocookie.com`. External *"Open in YouTube"* links have been eliminated to prevent student distraction.
+
+---
+
+## 🎯 9. Gamified Point System & Leaderboards
+
+STEMLearn employs an automated gamification engine that rewards student performance and drives engagement across both Competitive and Collaborative study conditions:
+
+### 📐 1. Points Calculation Formula
+Points are awarded upon quiz completion based on mastery accuracy:
+
+$$\mathbf{Points\ Earned} = \text{Score Percentage} \times 10 \quad (\text{Applicable when Passed}, \ge 70\%)$$
+
+| Quiz Performance | Outcome | Points Awarded | Progression Impact |
+| :--- | :--- | :--- | :--- |
+| **100% Score** | Passed | **+1000 Points** | Maximum mastery bonus, unlocks next chapter |
+| **90% Score** | Passed | **+900 Points** | High mastery bonus, unlocks next chapter |
+| **80% Score** | Passed | **+800 Points** | Standard passing score, unlocks next chapter |
+| **70% Score** | Passed | **+700 Points** | Minimum passing threshold, unlocks next chapter |
+| **< 70% Score** | Failed | **0 Points** | Prerequisite locked, retake required |
+
+*(Note: In the event of an automated timer expiration/auto-submit, students receive partial participation credit of $\text{Score \%} \times 5$).*
+
+### 🏆 2. Where Points Are Utilized
+1. **Student Dashboard & Profile**: Tracks cumulative mastery XP and overall student level.
+2. **Competitive Solo Leaderboard (Condition A)**: Ranks students within their class division by individual point totals.
+3. **Collaborative Squads (Condition B)**: Aggregates all squad members' points into a collective Team Score to determine squad rankings.
+4. **Achievement Badges**: Unlocks gamified milestone awards (e.g., Century Club, STEM Pioneer).
+
+---
+
+## 🤖 10. AI Configuration (Groq & Gemini)
 
 STEMLearn integrates high-speed inference for AI Quiz Generation and the Student Study Tutor:
 
@@ -343,18 +390,18 @@ STEMLearn integrates high-speed inference for AI Quiz Generation and the Student
 
 ---
 
-## 📊 9. Research ANOVA Telemetry & Data Export
+## 📊 11. Research ANOVA Telemetry & Data Export
 
 The platform is purpose-built to facilitate academic studies evaluating gamified learning mechanisms:
 - **Independent Variable**: Learning Condition (Competitive Solo vs. Collaborative Squad).
 - **Dependent Variables**: Quiz accuracy (%), completion time (seconds), attempt velocity (number of re-attempts), and participation rate.
 - **Data Export**:
-  - Navigate to **Teacher Portal → ANOVA Telemetry** or **Admin Portal → Settings**.
-  - Click **Export SPSS CSV** to download a standardized dataset formatted with participant IDs, condition labels, timestamps, and scores.
+   - Navigate to **Teacher Portal → ANOVA Telemetry** or **Admin Portal → Settings**.
+   - Click **Export SPSS CSV** to download a standardized dataset formatted with participant IDs, condition labels, timestamps, and scores.
 
 ---
 
-## ❓ 10. Frequently Asked Questions & Troubleshooting
+## ❓ 12. Frequently Asked Questions & Troubleshooting
 
 ### Q1: `ModuleNotFoundError: No module named 'flask'`
 > **Fix**: Ensure your virtual environment is active before running commands:
@@ -376,7 +423,7 @@ The platform is purpose-built to facilitate academic studies evaluating gamified
 
 ---
 
-## 🏆 11. Production Build & Deployment
+## 🏆 13. Production Build & Deployment
 
 To create an optimized production bundle:
 
@@ -396,7 +443,7 @@ gunicorn -w 4 -b 0.0.0.0:5000 wsgi:app
 
 ---
 
-## 📜 12. Authors & Acknowledgements
+## 📜 14. Authors & Acknowledgements
 
 - **Research Project**: Evaluating the Effectiveness of Competitive vs. Collaborative Leaderboards in Middle School STEM Learning.
 - **Client & Academic Team**: Anushka Patare & Project Guide.
