@@ -44,8 +44,11 @@ export default function Avatar({
   let resolvedSrc = src;
   if (src && src.startsWith('/api/profile/photo/')) {
     const token = localStorage.getItem('token');
+    const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
     if (token) {
-      resolvedSrc = `${src}?token=${encodeURIComponent(token)}`;
+      resolvedSrc = `${apiBase}${src}?token=${encodeURIComponent(token)}`;
+    } else {
+      resolvedSrc = `${apiBase}${src}`;
     }
   }
 
