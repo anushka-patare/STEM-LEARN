@@ -126,42 +126,61 @@ def public_overview():
         tname = t.get('name') or t.get('team_name') or 'STEM Squad'
         tcode = t.get('code') or t.get('team_code') or f'SQUAD-{tid[-4:].upper()}'
         tgrade = str(t.get('grade') or '')
-        
-        # Members list
-        members_data = t.get('members', [])
-        if not members_data and 'member_ids' in t:
-            members_data = list(db.users.find({'_id': {'$in': t['member_ids']}}, {'full_name': 1, 'email': 1, 'points': 1}))
-        
-        member_count = len(members_data) or t.get('member_count', 0)
-        total_points = int(t.get('total_score') or t.get('total_team_points') or 0)
-        
-        # Calculate from members if total score is 0
-        if total_points == 0 and members_data:
-            total_points = sum(int(m.get('points', 0)) for m in members_data if isinstance(m, dict))
-            
-        avg_accuracy = float(t.get('avg_accuracy') or t.get('average_team_score') or 0.0)
-        quizzes_completed = int(t.get('quizzes_completed', 0))
+        tdivision = str(t.get('division') or '')
+
+        # Query members from db.users by team_id
+        t_oid = ObjectId(tid) if ObjectId.is_valid(tid) else None
+        member_query = {
+            'role': 'student',
+            '$or': [{'team_id': tid}, {'team_id': t_oid}] if t_oid else [{'team_id': tid}]
+        }
+        db_members = list(db.users.find(member_query, {'password_hash': 0, 'otp_hash': 0}))
+
+        member_ids_str = [str(m['_id']) for m in db_members]
+        member_count = len(db_members) or t.get('member_count', 0)
+
+        # Calculate total score from member points
+        member_points_sum = sum(int(m.get('points', 0)) for m in db_members)
+        total_points = max(int(t.get('total_score') or t.get('total_team_points') or 0), member_points_sum)
+
+        # Attempts by squad members or team_id
+        team_attempts = list(db.quiz_attempts.find({
+            '$or': [
+                {'team_id': tid},
+                {'student_id': {'$in': member_ids_str}}
+            ],
+            'status': {'$in': ['submitted', 'completed']}
+        }))
+
+        quizzes_completed = len(team_attempts) or int(t.get('quizzes_completed', 0))
+        if team_attempts:
+            avg_accuracy = round(sum(float(a.get('score_percentage') or a.get('accuracy') or 0) for a in team_attempts) / len(team_attempts), 1)
+        else:
+            avg_accuracy = float(t.get('avg_accuracy') or t.get('average_team_score') or 0.0)
 
         team_wise.append({
             'team_id': tid,
             'name': tname,
             'code': tcode,
             'grade': tgrade,
+            'division': tdivision,
+            'slogan': t.get('slogan', ''),
             'member_count': member_count,
             'members': [
                 {
-                    'name': m.get('name') or m.get('full_name') or 'Member',
-                    'role': m.get('role', 'Squad Member'),
-                    'email': m.get('email', '')
-                } for m in members_data if isinstance(m, dict)
-            ] if members_data else [],
+                    'name': m.get('full_name') or m.get('name') or 'Member',
+                    'role': 'Squad Member',
+                    'email': m.get('email', ''),
+                    'points': int(m.get('points', 0))
+                } for m in db_members
+            ],
             'total_score': total_points,
             'avg_accuracy': avg_accuracy,
             'quizzes_completed': quizzes_completed,
             'scoring_method': t.get('scoring_method', 'collaborative_aggregate')
         })
 
-    # Sort teams by total_score descending
+    # Sort teams by total_score descending, then accuracy
     team_wise.sort(key=lambda x: (x['total_score'], x['avg_accuracy']), reverse=True)
     for i, t in enumerate(team_wise):
         t['rank'] = i + 1

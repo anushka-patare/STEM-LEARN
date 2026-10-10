@@ -49,7 +49,10 @@ def student_dashboard():
         # Team info
         team = None
         if user.get('team_id'):
-            team = db.teams.find_one({'_id': ObjectId(user['team_id'])})
+            tid = user['team_id']
+            t_oid = ObjectId(tid) if (isinstance(tid, str) and ObjectId.is_valid(tid)) else (tid if isinstance(tid, ObjectId) else None)
+            team_query = {'$or': [{'_id': str(tid)}, {'_id': t_oid}]} if t_oid else {'_id': str(tid)}
+            team = db.teams.find_one(team_query)
             if team:
                 team['_id'] = str(team['_id'])
 
@@ -425,18 +428,249 @@ def get_team():
     if not user or not user.get('team_id'):
         return jsonify({'success': True, 'data': None})
 
-    team = db.teams.find_one({'_id': ObjectId(user['team_id'])})
-    if team:
-        team['_id'] = str(team['_id'])
-        members = list(db.users.find(
-            {'team_id': user['team_id'], 'role': 'student'},
-            {'password_hash': 0, 'full_name': 1, 'photo': 1, 'points': 1, 'student_id': 1}
-        ))
-        for m in members:
-            m['_id'] = str(m['_id'])
-        team['members'] = members
+    tid = user['team_id']
+    t_oid = ObjectId(tid) if (isinstance(tid, str) and ObjectId.is_valid(tid)) else (tid if isinstance(tid, ObjectId) else None)
+    team_query = {'$or': [{'_id': str(tid)}, {'_id': t_oid}]} if t_oid else {'_id': str(tid)}
+    team = db.teams.find_one(team_query)
+    if not team:
+        return jsonify({'success': True, 'data': None})
+
+    tid_str = str(team['_id'])
+    team['_id'] = tid_str
+
+    # Query members
+    member_filter = {
+        'role': 'student',
+        '$or': [
+            {'team_id': tid_str},
+            {'team_id': t_oid} if t_oid else {'team_id': tid_str}
+        ]
+    }
+    members = list(db.users.find(member_filter, {'password_hash': 0, 'otp_hash': 0}))
+    formatted_members = []
+    total_points = 0
+    for m in members:
+        pts = int(m.get('points', 0))
+        total_points += pts
+        formatted_members.append({
+            '_id': str(m['_id']),
+            'student_id': m.get('student_id') or str(m['_id']),
+            'full_name': m.get('full_name') or m.get('name', 'Student'),
+            'name': m.get('name') or m.get('full_name', 'Student'),
+            'email': m.get('email', ''),
+            'roll_number': m.get('roll_number', ''),
+            'photo': m.get('photo', ''),
+            'points': pts
+        })
+    team['members'] = formatted_members
+    team['member_count'] = len(formatted_members)
+    team['total_score'] = max(int(team.get('total_score', 0)), total_points)
 
     return jsonify({'success': True, 'data': team})
+
+
+@student_bp.route('/team/performance', methods=['GET'])
+@jwt_required()
+@student_required
+def get_team_performance():
+    """Collaborative performance metrics, member contributions, and test history for student's squad."""
+    db = current_app.config['db']
+    user_id = get_jwt_identity()
+    user = db.users.find_one({'_id': ObjectId(user_id)})
+    if not user or not user.get('team_id'):
+        return jsonify({'success': False, 'message': 'You are not in a squad yet'}), 400
+
+    tid = user['team_id']
+    t_oid = ObjectId(tid) if (isinstance(tid, str) and ObjectId.is_valid(tid)) else (tid if isinstance(tid, ObjectId) else None)
+    team_query = {'$or': [{'_id': str(tid)}, {'_id': t_oid}]} if t_oid else {'_id': str(tid)}
+    team = db.teams.find_one(team_query)
+    if not team:
+        return jsonify({'success': False, 'message': 'Squad not found'}), 404
+
+    tid_str = str(team['_id'])
+
+    # Members
+    member_filter = {
+        'role': 'student',
+        '$or': [
+            {'team_id': tid_str},
+            {'team_id': t_oid} if t_oid else {'team_id': tid_str}
+        ]
+    }
+    members = list(db.users.find(member_filter, {'password_hash': 0, 'otp_hash': 0}))
+    member_ids_str = [str(m['_id']) for m in members]
+    member_ids_oid = [m['_id'] for m in members]
+    member_map = {str(m['_id']): m for m in members}
+
+    # Attempts by squad members
+    attempts = list(db.quiz_attempts.find({
+        '$or': [
+            {'team_id': tid_str},
+            {'student_id': {'$in': member_ids_str}},
+            {'user_id': {'$in': member_ids_oid}}
+        ],
+        'status': {'$in': ['submitted', 'completed']}
+    }).sort('submitted_at', -1))
+
+    # Preload maps
+    subjects_map = {str(s['_id']): s.get('name', 'Science') for s in db.subjects.find()}
+    all_quizzes_map = {str(q['_id']): q for q in db.quizzes.find()}
+
+    # Calculate member stats
+    member_stats = {
+        mid: {
+            '_id': mid,
+            'student_id': m.get('student_id') or mid,
+            'name': m.get('full_name') or m.get('name', 'Student'),
+            'points': int(m.get('points', 0)),
+            'quizzes_completed': 0,
+            'quizzes_passed': 0,
+            'scores': []
+        }
+        for mid, m in member_map.items()
+    }
+
+    recent_activity = []
+    subject_counts = {}
+
+    for a in attempts:
+        sid = str(a.get('student_id', ''))
+        qid = str(a.get('quiz_id', ''))
+        qdoc = all_quizzes_map.get(qid, {})
+        sub_id = str(a.get('subject_id') or qdoc.get('subject_id', ''))
+        sub_name = subjects_map.get(sub_id, 'General STEM')
+
+        score_pct = float(a.get('score_percentage') or a.get('accuracy') or 0)
+        passed = bool(a.get('passed', False))
+
+        if sid in member_stats:
+            member_stats[sid]['quizzes_completed'] += 1
+            if passed:
+                member_stats[sid]['quizzes_passed'] += 1
+            member_stats[sid]['scores'].append(score_pct)
+
+        subject_counts[sub_name] = subject_counts.get(sub_name, 0) + 1
+
+        m_name = member_map.get(sid, {}).get('full_name') or member_map.get(sid, {}).get('name') or 'Squad Member'
+        submitted_at_val = a.get('submitted_at')
+        recent_activity.append({
+            'attempt_id': str(a['_id']),
+            'quiz_title': a.get('quiz_title') or qdoc.get('title') or 'STEM Assessment',
+            'student_name': m_name,
+            'student_id': sid,
+            'score': a.get('score', 0),
+            'total_marks': a.get('total_marks', 10),
+            'score_percentage': round(score_pct, 1),
+            'passed': passed,
+            'subject_name': sub_name,
+            'submitted_at': submitted_at_val.isoformat() if hasattr(submitted_at_val, 'isoformat') else str(submitted_at_val or '')
+        })
+
+    # Finalize member stats with average accuracy
+    member_contributions = []
+    total_squad_points = 0
+    for mid, ms in member_stats.items():
+        total_squad_points += ms['points']
+        avg_acc = round(sum(ms['scores']) / len(ms['scores']), 1) if ms['scores'] else 0.0
+        ms['average_accuracy'] = avg_acc
+        del ms['scores']
+        member_contributions.append(ms)
+
+    member_contributions.sort(key=lambda x: (x['points'], x['quizzes_completed']), reverse=True)
+
+    total_attempts_count = len(attempts)
+    passed_count = sum(1 for a in attempts if a.get('passed'))
+    avg_accuracy = round(sum(float(a.get('score_percentage') or 0) for a in attempts) / total_attempts_count, 1) if total_attempts_count > 0 else 0.0
+
+    return jsonify({
+        'success': True,
+        'data': {
+            'team': {
+                '_id': tid_str,
+                'name': team.get('name'),
+                'code': team.get('code'),
+                'grade': team.get('grade'),
+                'division': team.get('division'),
+                'slogan': team.get('slogan'),
+                'scoring_method': team.get('scoring_method', 'average'),
+                'member_count': len(members)
+            },
+            'stats': {
+                'total_points': max(int(team.get('total_score') or 0), total_squad_points),
+                'quizzes_completed': total_attempts_count,
+                'quizzes_passed': passed_count,
+                'average_accuracy': avg_accuracy,
+                'member_count': len(members)
+            },
+            'member_contributions': member_contributions,
+            'recent_activity': recent_activity[:15],
+            'subject_breakdown': subject_counts
+        }
+    })
+
+
+@student_bp.route('/team/quizzes', methods=['GET'])
+@jwt_required()
+@student_required
+def get_team_quizzes():
+    """Get published STEM quizzes for the student's squad/grade with collaborative context."""
+    db = current_app.config['db']
+    user_id = get_jwt_identity()
+    user = db.users.find_one({'_id': ObjectId(user_id)})
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'}), 404
+
+    grade_raw = str(user.get('grade', '7')).replace('Grade', '').strip()
+    grade_match = [grade_raw, f'Grade {grade_raw}']
+    if grade_raw.isdigit():
+        grade_match.append(int(grade_raw))
+
+    quizzes = list(db.quizzes.find({
+        'status': 'published',
+        'grade': {'$in': grade_match}
+    }).sort('created_at', -1))
+
+    subjects_map = {str(s['_id']): s.get('name', 'Science') for s in db.subjects.find()}
+    chapters_map = {str(c['_id']): c.get('name', '') for c in db.chapters.find()}
+
+    tid_str = str(user.get('team_id', ''))
+
+    # Attempts by student and team
+    user_attempts = {
+        str(a['quiz_id']): a for a in db.quiz_attempts.find(
+            {'student_id': user_id, 'status': {'$in': ['submitted', 'completed']}}
+        )
+    }
+
+    team_attempts_count = {}
+    if tid_str:
+        for a in db.quiz_attempts.find({'team_id': tid_str, 'status': {'$in': ['submitted', 'completed']}}):
+            qid = str(a.get('quiz_id', ''))
+            team_attempts_count[qid] = team_attempts_count.get(qid, 0) + 1
+
+    formatted_quizzes = []
+    for q in quizzes:
+        qid = str(q['_id'])
+        u_att = user_attempts.get(qid)
+        formatted_quizzes.append({
+            '_id': qid,
+            'title': q.get('title', 'STEM Quiz'),
+            'description': q.get('description', ''),
+            'subject_name': subjects_map.get(str(q.get('subject_id', '')), 'Science'),
+            'chapter_name': chapters_map.get(str(q.get('chapter_id', '')), 'Chapter Overview'),
+            'grade': str(q.get('grade', grade_raw)),
+            'total_marks': q.get('total_marks', 10),
+            'duration_minutes': q.get('duration_minutes', 10),
+            'questions_count': len(q.get('question_ids', [])) or q.get('total_questions', 5),
+            'passing_percentage': q.get('passing_percentage', 70),
+            'mode': q.get('mode', 'collaborative'),
+            'my_attempted': bool(u_att),
+            'my_passed': bool(u_att and u_att.get('passed')),
+            'my_score': u_att.get('score_percentage') if u_att else None,
+            'squad_completions': team_attempts_count.get(qid, 0)
+        })
+
+    return jsonify({'success': True, 'data': formatted_quizzes})
 
 
 @student_bp.route('/profile', methods=['GET'])

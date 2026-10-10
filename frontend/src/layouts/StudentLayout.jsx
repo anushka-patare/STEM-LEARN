@@ -58,6 +58,30 @@ export default function StudentLayout() {
       label: 'My Squad Team',
       children: [
         {
+          to: '/student/team?view=my_squad',
+          icon: FiShield,
+          label: 'My Squad Team',
+          viewKey: 'my_squad'
+        },
+        {
+          to: '/student/team?view=squad_quizzes',
+          icon: FiFileText,
+          label: 'Squad Quizzes',
+          viewKey: 'squad_quizzes'
+        },
+        {
+          to: '/student/team?view=squad_results',
+          icon: FiBarChart2,
+          label: 'Squad Results',
+          viewKey: 'squad_results'
+        },
+        {
+          to: '/student/team?view=squad_leaderboard',
+          icon: FiAward,
+          label: 'Squad Leaderboard',
+          viewKey: 'squad_leaderboard'
+        },
+        {
           to: '/student/team?view=all_squads',
           icon: FiList,
           label: 'All Squad Teams',
@@ -68,12 +92,6 @@ export default function StudentLayout() {
           icon: FiKey,
           label: 'Join Team',
           viewKey: 'join_team'
-        },
-        {
-          to: '/student/team?view=my_squad',
-          icon: FiShield,
-          label: 'My Squad Team',
-          viewKey: 'my_squad'
         }
       ]
     },

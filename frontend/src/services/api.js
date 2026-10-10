@@ -188,6 +188,8 @@ export const studentService = {
   getProgress: () => api.get('/student/progress'),
   getResults: () => api.get('/student/progress'),
   getMyTeam: () => api.get('/student/team'),
+  getMyTeamPerformance: () => api.get('/student/team/performance'),
+  getMyTeamQuizzes: () => api.get('/student/team/quizzes'),
   getQuizzes: (params) => api.get('/student/quizzes', { params }),
 };
 
@@ -245,6 +247,8 @@ export const questionService = {
 // ─── TEAM SERVICES ──────────────────────────────────────────
 export const teamService = {
   getMyTeam: () => api.get('/student/team'),
+  getMyTeamPerformance: () => api.get('/student/team/performance'),
+  getMyTeamQuizzes: () => api.get('/student/team/quizzes'),
   getTeams: (params) => api.get('/teacher/teams', { params }),
   getTeamPerformance: (teamId) => api.get(`/teacher/teams/${teamId}/performance`),
   createTeam: (data) => api.post('/teams', data),
