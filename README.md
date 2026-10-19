@@ -25,6 +25,8 @@ The primary research objective of this platform is to experimentally investigate
   - **Teacher AI Quiz Generator**: Generates Bloom-taxonomy-calibrated questions with one click using **Groq (Llama 3.3 70B)** or **Google Gemini 2.0 Flash**.
   - **Student AI Study Tutor**: Context-aware STEM tutor providing interactive, encouraging guidance with markdown formula rendering, blocked automatically during active exams.
 
+
+🌐 **Website Link:** [https://stemlearn-frontend.onrender.com/](https://stemlearn-frontend.onrender.com/)
 ---
 
 ## 🏛️ 2. Architecture & Technology Stack
