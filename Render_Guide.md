@@ -63,7 +63,7 @@ Before cloning the project on a new laptop, install the following core tools:
 ### A. Clone the Repository
 Open PowerShell or your terminal, navigate to your desired directory, and clone the repository:
 ```bash
-git clone https://github.com/durgeshwagh14/STEM.git
+git clone https://github.com/username
 cd STEM
 ```
 
