@@ -427,6 +427,7 @@ export default function StudentAuth({ initialMode = 'login' }) {
                   >
                     <option value="A">Div A</option>
                     <option value="B">Div B</option>
+                    <option value="C">Div C</option>
                   </select>
                 </div>
                 <div>
