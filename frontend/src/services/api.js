@@ -9,6 +9,10 @@ const getBaseURL = () => {
     }
     return `${cleanUrl}/api`;
   }
+  // Automatic fallback when deployed on Render or production domains
+  if (typeof window !== 'undefined' && (window.location.hostname.includes('onrender.com') || window.location.hostname.includes('vercel.app'))) {
+    return 'https://stemlearn-backend-a2mn.onrender.com/api';
+  }
   return '/api';
 };
 

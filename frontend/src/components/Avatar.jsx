@@ -44,7 +44,7 @@ export default function Avatar({
   let resolvedSrc = src;
   if (src && src.startsWith('/api/profile/photo/')) {
     const token = localStorage.getItem('token');
-    const apiBase = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+    const apiBase = (import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com') ? 'https://stemlearn-backend-a2mn.onrender.com' : '')).replace(/\/+$/, '');
     if (token) {
       resolvedSrc = `${apiBase}${src}?token=${encodeURIComponent(token)}`;
     } else {
