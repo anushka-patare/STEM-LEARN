@@ -1,4 +1,4 @@
-"""Database seed script - Creates admin account, curriculum, and sample data for Grades 6–9."""
+"""Database seed script - Creates admin account, teacher, and curriculum for Grades 6–9."""
 import os
 import sys
 from datetime import datetime
@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 load_dotenv()
 
 from utils.password import hash_password
-from utils.generators import generate_student_id, generate_teacher_id, generate_team_code
+from utils.generators import generate_teacher_id
 
 
 def check_production_environment():
@@ -157,7 +157,6 @@ def seed_database():
         {'name': 'Python Basics', 'category': 'Programming', 'subject': 'Technology', 'order': 1, 'description': 'Introduction to Python programming'},
         {'name': 'Linear Equations', 'category': 'Algebra', 'subject': 'Mathematics', 'order': 1, 'description': 'Solving linear equations and inequalities'},
         {'name': 'Triangles', 'category': 'Geometry', 'subject': 'Mathematics', 'order': 1, 'description': 'Properties and types of triangles'},
-        # Grade 9 Chapter
         {'name': 'Gravitation & Work-Energy', 'category': 'Physics', 'subject': 'Science', 'order': 4, 'description': 'Universal gravitation, work, energy, and power principles for Grade 9'},
     ]
     chapter_ids = {}
@@ -181,9 +180,8 @@ def seed_database():
             chapter_ids[ch['name']] = str(result.inserted_id)
     print(f'✅ Chapters verified: {len(chapter_ids)} chapters')
 
-    # ─── 6. FACULTY / TEACHER ──────────────────────────────────
+    # ─── 6. TEACHER ────────────────────────────────────────────
     teacher_exists = db.users.find_one({'email': 'teacher@stemlearn.com'})
-    teacher_id_value = None
     if not teacher_exists:
         teacher = {
             'teacher_id': generate_teacher_id(),
@@ -209,11 +207,9 @@ def seed_database():
             'created_at': now,
             'updated_at': now
         }
-        result = db.users.insert_one(teacher)
-        teacher_id_value = str(result.inserted_id)
+        db.users.insert_one(teacher)
         print('✅ Teacher created: teacher (teacher@stemlearn.com)')
     else:
-        teacher_id_value = str(teacher_exists['_id'])
         db.users.update_one(
             {'_id': teacher_exists['_id']},
             {'$set': {
@@ -226,170 +222,7 @@ def seed_database():
         )
         print('ℹ️  Teacher verified (idempotent)')
 
-    # ─── 7. SAMPLE STUDENTS (GRADES 6, 7, 8, 9) ────────────────
-    students_data = [
-        # Grade 6
-        {'name': 'Aarav Gupta', 'grade': '6', 'division': 'A', 'username': 'student6a1', 'email': 'student6a1@stemlearn.com'},
-        {'name': 'Diya Sharma', 'grade': '6', 'division': 'B', 'username': 'student6b1', 'email': 'student6b1@stemlearn.com'},
-        # Grade 7
-        {'name': 'Arjun Patel', 'grade': '7', 'division': 'A', 'username': 'student1', 'email': 'student1@stemlearn.com'},
-        {'name': 'Priya Singh', 'grade': '7', 'division': 'A', 'username': 'student2', 'email': 'student2@stemlearn.com'},
-        {'name': 'Rohan Kumar', 'grade': '7', 'division': 'A', 'username': 'student3', 'email': 'student3@stemlearn.com'},
-        {'name': 'Ananya Desai', 'grade': '7', 'division': 'A', 'username': 'student4', 'email': 'student4@stemlearn.com'},
-        {'name': 'Vikram Rao', 'grade': '7', 'division': 'B', 'username': 'student5', 'email': 'student5@stemlearn.com'},
-        {'name': 'Sneha Joshi', 'grade': '7', 'division': 'B', 'username': 'student6', 'email': 'student6@stemlearn.com'},
-        # Grade 8
-        {'name': 'Aditya Malhotra', 'grade': '8', 'division': 'A', 'username': 'student7', 'email': 'student7@stemlearn.com'},
-        {'name': 'Kavya Iyer', 'grade': '8', 'division': 'A', 'username': 'student8', 'email': 'student8@stemlearn.com'},
-        # Grade 9 (Competitive & Collaborative)
-        {'name': 'Reyansh Roy', 'grade': '9', 'division': 'A', 'username': 'student9a1', 'email': 'student9a1@demo.invalid'},
-        {'name': 'Tanvi Verma', 'grade': '9', 'division': 'A', 'username': 'student9a2', 'email': 'student9a2@demo.invalid'},
-        {'name': 'Ishaan Mehra', 'grade': '9', 'division': 'B', 'username': 'student9b1', 'email': 'student9b1@demo.invalid'},
-        {'name': 'Meera Nair', 'grade': '9', 'division': 'B', 'username': 'student9b2', 'email': 'student9b2@demo.invalid'},
-    ]
-
-    for i, s in enumerate(students_data):
-        existing = db.users.find_one({'$or': [{'username': s['username']}, {'email': s['email']}]})
-        if not existing:
-            db.users.insert_one({
-                'student_id': generate_student_id(),
-                'full_name': s['name'],
-                'email': s['email'],
-                'username': s['username'],
-                'password_hash': hash_password('student123'),
-                'role': 'student',
-                'grade': s['grade'],
-                'division': s['division'],
-                'roll_number': str(i + 1),
-                'mobile': '',
-                'photo': '',
-                'status': 'active',
-                'approval_status': 'active',
-                'team_id': None,
-                'points': 0,
-                'created_at': now,
-                'updated_at': now
-            })
-        else:
-            db.users.update_one(
-                {'_id': existing['_id']},
-                {
-                    '$set': {
-                        'username': s['username'],
-                        'password_hash': hash_password('student123'),
-                        'status': 'active',
-                        'approval_status': 'active',
-                        'grade': s['grade'],
-                        'division': s['division'],
-                        'updated_at': now
-                    }
-                }
-            )
-    print(f'✅ Students verified: {len(students_data)} demo students across Grades 6–9')
-
-    # ─── 8. SAMPLE TEAMS ───────────────────────────────────────
-    teams_data = [
-        {'name': 'Team Alpha (G7)', 'grade': '7', 'division': 'A'},
-        {'name': 'Team Beta (G7)', 'grade': '7', 'division': 'A'},
-        {'name': 'Team Gamma (G7)', 'grade': '7', 'division': 'B'},
-        {'name': 'Quantum Squad (G9)', 'grade': '9', 'division': 'B'},
-        {'name': 'Photon Squad (G9)', 'grade': '9', 'division': 'B'},
-    ]
-    for t in teams_data:
-        if not db.teams.find_one({'name': t['name']}):
-            db.teams.insert_one({
-                **t,
-                'code': generate_team_code(),
-                'class_id': '',
-                'scoring_method': 'average',
-                'status': 'active',
-                'created_by': teacher_id_value,
-                'created_at': now,
-                'updated_at': now
-            })
-    print('✅ Teams verified: Alpha, Beta, Gamma, Quantum Squad, Photon Squad')
-
-    # ─── 9. SAMPLE QUIZZES & QUESTIONS ─────────────────────────
-    fm_chapter_id = chapter_ids.get('Force and Motion', '')
-    g9_chapter_id = chapter_ids.get('Gravitation & Work-Energy', '')
-    science_id = subject_ids.get('Science', '')
-    physics_id = category_ids.get('Physics', '')
-
-    if fm_chapter_id and not db.quizzes.find_one({'chapter_id': fm_chapter_id}):
-        quizzes = [
-            {'title': 'Basic Concepts of Force', 'seq': 1, 'final': False, 'desc': 'Test your understanding of basic force concepts', 'grade': '7'},
-            {'title': 'Types of Forces', 'seq': 2, 'final': False, 'desc': 'Learn about gravity, friction, and applied forces', 'grade': '7'},
-            {'title': 'Motion and Speed', 'seq': 3, 'final': False, 'desc': 'Understand motion, speed, and velocity', 'grade': '7'},
-            {'title': 'Force and Motion - Final Exam', 'seq': 4, 'final': True, 'desc': 'Comprehensive exam covering all force and motion topics', 'grade': '7'},
-        ]
-        quiz_ids = []
-        for q in quizzes:
-            result = db.quizzes.insert_one({
-                'title': q['title'],
-                'description': q['desc'],
-                'grade': q['grade'],
-                'subject_id': science_id,
-                'category_id': physics_id,
-                'chapter_id': fm_chapter_id,
-                'difficulty': 'medium',
-                'duration_minutes': 15 if q['final'] else 10,
-                'total_marks': 20 if q['final'] else 10,
-                'passing_percentage': 70,
-                'sequence_number': q['seq'],
-                'is_final_exam': q['final'],
-                'allow_retry': True,
-                'max_attempts': 3,
-                'retry_delay_hours': 0,
-                'require_teacher_unlock': False,
-                'randomize_questions': False,
-                'show_result': True,
-                'security_settings': {
-                    'require_fullscreen': True,
-                    'tab_switch_detection': True,
-                    'window_focus_detection': True,
-                    'refresh_protection': True,
-                    'copy_protection': True,
-                    'paste_protection': True,
-                    'right_click_disabled': True,
-                    'max_violations': 3,
-                    'violation_action': 'auto_submit'
-                },
-                'mode': 'both',
-                'status': 'published',
-                'created_by': teacher_id_value,
-                'created_at': now,
-                'updated_at': now
-            })
-            quiz_ids.append(str(result.inserted_id))
-
-        # Sample questions for quiz 1
-        q1_questions = [
-            {'question': 'What is a force?', 'option_a': 'A push or pull', 'option_b': 'A type of energy',
-             'option_c': 'A measurement of speed', 'option_d': 'A form of light', 'correct_answer': 'A',
-             'explanation': 'A force is a push or pull that can change the motion of an object.', 'difficulty': 'easy'},
-            {'question': 'What is the SI unit of force?', 'option_a': 'Joule', 'option_b': 'Newton',
-             'option_c': 'Watt', 'option_d': 'Pascal', 'correct_answer': 'B',
-             'explanation': 'The SI unit of force is Newton (N), named after Sir Isaac Newton.', 'difficulty': 'easy'},
-            {'question': 'Which of the following is a contact force?', 'option_a': 'Gravity', 'option_b': 'Magnetism',
-             'option_c': 'Friction', 'option_d': 'Electrostatic force', 'correct_answer': 'C',
-             'explanation': 'Friction is a contact force that acts between surfaces that are touching.', 'difficulty': 'medium'},
-            {'question': 'What happens when balanced forces act on an object?', 'option_a': 'It accelerates', 'option_b': 'It stays at rest or moves at constant velocity',
-             'option_c': 'It stops immediately', 'option_d': 'It changes direction', 'correct_answer': 'B',
-             'explanation': 'Balanced forces result in no change in motion - the object stays at rest or continues at constant velocity.', 'difficulty': 'medium'},
-        ]
-        for i, q in enumerate(q1_questions):
-            db.questions.insert_one({
-                'quiz_id': quiz_ids[0],
-                **q,
-                'question_type': 'mcq',
-                'marks': 1,
-                'order': i + 1,
-                'created_by': teacher_id_value,
-                'created_at': now
-            })
-        print(f'✅ Grade 7 Quizzes created: 4 quizzes and sample questions')
-
-    # ─── 10. SYSTEM SETTINGS ───────────────────────────────────
+    # ─── 7. SYSTEM SETTINGS ───────────────────────────────────
     if not db.system_settings.find_one({'type': 'global'}):
         db.system_settings.insert_one({
             'type': 'global',
